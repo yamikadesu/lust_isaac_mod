@@ -1,0 +1,6 @@
+<entities anm2root="gfx/" version="5">
+	<entity id="1000" variant="2100" name="Energy Whip" anm2path="Energy_Whip.anm2" shadowSize="0" 
+		collisionDamage="0" collisionMass="3" collisionRadius="16" numGridCollisionPoints="0" friction="1"/>
+	<entity id="1000" variant="2110" name="Energy Whip Hitbox" anm2path="Energy_Whip.anm2" shadowSize="0" 
+		collisionDamage="0" collisionMass="100" collisionRadius="40" numGridCollisionPoints="12" friction="1"/>
+</entities>

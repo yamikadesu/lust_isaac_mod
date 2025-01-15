@@ -1,0 +1,9 @@
+<players root="gfx/characters/costumes/" 
+         bigportraitroot="gfx/ui/stage/"
+         portraitroot="gfx/ui/stage/" 
+         nameimageroot="gfx/ui/boss/" >
+	<player cache="speed" name="Lust" skin="character_Lust.png" hp="0" items="415" canShoot="false"
+          nameimage="playername_Lust.png"
+          bigportrait="Luststage.png" skinColor="1" 
+          portrait="Luststage.png" costumeSuffix="Lust"  />
+</players>

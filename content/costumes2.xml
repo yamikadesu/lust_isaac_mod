@@ -1,0 +1,6 @@
+<costumes anm2root="gfx/characters/">
+	<costume anm2path="character_Lust.anm2" priority="99" type="none"/>
+	<costume anm2path="character_Lust Alt.anm2" priority="99" type="none"/>
+	<costume anm2path="character_Lust Flying.anm2" priority="99" type="none" isFlying= "true"/>
+	<costume anm2path="character_Lust Flying Alt.anm2" priority="99" type="none" isFlying= "true"/>
+</costumes>
