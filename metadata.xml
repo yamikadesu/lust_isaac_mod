@@ -1,9 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <metadata>
     <name>Lust (YamikaDesu)</name>
-    <directory>Lust (YamikaDesu)</directory>
-    <description> </description>
-    <version>1</version>
+    <directory>lust (yamikadesu)</directory>
+    <id>3418387476</id>
+    <description>Furry Character Mod made by YamikaDesu
+
+The character's name is Lust (not to be confused with the boss Lust xD), he just wants hugs and cuddles so he will go around the basement spreading love with his whip! The character initially has the Crown of Light and flies, although it seems a bit broken it has been balanced (and will continue to be done) to make the character fun and difficult to play at the same time! He is also a melee character that uses an energy whip to attack enemies and synergizes with a lot of items. I hope you like it!
+
+The sprites have been drawn by Freezepop88
+
+The cover art has been drawn by Yaku
+
+And the trailer video and cover gif has been made by moshi_shian 
+
+If you find any bug or mod suggestion don't hesitate to comment it!</description>
+    <version></version>
     <visibility>Public</visibility>
+    <tag id="Lua"/>
     <tag id="Player Characters"/>
 </metadata>

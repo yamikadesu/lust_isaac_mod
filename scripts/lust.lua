@@ -352,7 +352,7 @@ function Lust:PostUpdateMelee(player, lastFireDirection, effectPosAlt)
             -- Buscar proyectiles en el área del melee y eliminarlos.
             local entities = Isaac.FindInRadius(internalPos, meleeDistance, EntityPartition.BULLET)
             for _, entity in ipairs(entities) do
-                if entity.Type == EntityType.ENTITY_PROJECTILE and GetPtrHash(entity.SpawnerEntity) ~= GetPtrHash(player) then
+                if entity.Type == EntityType.ENTITY_PROJECTILE and (not entity.SpawnerEntity or GetPtrHash(entity.SpawnerEntity) ~= GetPtrHash(player)) then
                     if utils.HasTearFlag(tearParams, TearFlags.TEAR_HOMING) or utils.HasTearFlag(tearParams, TearFlags.TEAR_BELIAL) then
                         --print("HAS HOMING")
                         entity.SpawnerEntity = player
