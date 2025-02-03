@@ -1,6 +1,6 @@
 local mod = RegisterMod("Lust (YamikaDesu)", 1) 
 
-local version = "1.0"
+local version = "1.1"
 local debugString = mod.Name .. " V" .. version .. " loaded successfully"
 print(debugString)
 
@@ -129,9 +129,12 @@ function Lust:InitPlayer(player)
         pData.CurrentEye = utils.Eyes.LEFT -- It will start with Right
         pData.RNG = rng
         pData.PrevAttackDirection = nil
+        pData.TotalAttacksNum = 0
         pData.TimeMarkSameDirection = 0
         pData.TimeAttacking = 0
         pData.TimeWithoutAttacking = 0
+        pData.SuccesfulEnemyHit = 0
+        pData.UnsuccesfulEnemyHit = 0
         pData.DeadToothRing = nil
         pData.EyeGreedAttacks = 0
         pData.IsDeadFirstCheck = true
@@ -655,6 +658,10 @@ function Lust:UpdateMelee(player)
         local fireDirection, lastFireDirection = utils.GetShootingDirection(player)
         local isShooting = fireDirection:Length() > 0.2 or (fireInput:Length() > 0.2 and fireDirection:Length() > 0.2)
 
+        if player:HasCollectible(CollectibleType.COLLECTIBLE_KIDNEY_STONE) then
+            --print("Is Shooting: ", fireDirection, fireInput)
+        end
+
         if utils.IsDirectionalShooting(player) then
             pData.MeleeHitbox = pData.MeleeWeapon
             pData.MeleeHitbox:SetDamageSource(EntityType.ENTITY_PLAYER)
@@ -739,13 +746,19 @@ function Lust:UpdateMelee(player)
                         pData.DoOnceChargingSound = true
                         -- Comprobar si la barra está cargada al máximo
                         pData.IsFullCharge = pData.ChargeProgress >= adjustedChargeTime
+                        
+                        pData.CurrentEye = (pData.CurrentEye % (utils.Eyes.NUM_EYES - 1)) + 1
+
+                        if player:HasCollectible(CollectibleType.COLLECTIBLE_LEAD_PENCIL) then
+                            pData.CurrentEye = utils.Eyes.RIGHT
+                        end 
+                        
                         -- Control de animaciones del ataque
                         local animName = utils.GetAnimationName(player, weaponSprite)
     
                         --print(animName)
     
                         --weaponSprite:Update()
-                        pData.CurrentEye = (pData.CurrentEye % (utils.Eyes.NUM_EYES - 1)) + 1
                         --print("Aim: ", player:GetLastDirection())
 
                         lastFireDirection = pData.MeleeLastFireDirection
@@ -933,6 +946,22 @@ function Lust:UpdateMelee(player)
                             end
                         end
 
+                        if player:HasCollectible(CollectibleType.COLLECTIBLE_MONSTROS_LUNG) 
+                            or (player:HasCollectible(CollectibleType.COLLECTIBLE_LEAD_PENCIL) and pData.TotalAttacksNum%15 == 0) then
+                            -- Angulos en grados para los disparos en forma de abanico
+                            local angles = {-20, -10, 10, 20}
+                            --local isFirstAngle = true
+
+                            -- Generar las direcciones de disparo en abanico
+                            for _, angle in ipairs(angles) do
+                                local attackDirection = utils.RotateVector(lastFireDirection, angle)
+                                if not utils.ContainsDirection(attacks, attackDirection) then
+                                    table.insert(attacks, attackDirection)
+                                    --numAttacks = numAttacks + 1
+                                end
+                            end
+                        end
+
                         if not utils.ContainsDirection(attacks, lastFireDirection)
                             and not player:HasCollectible(CollectibleType.COLLECTIBLE_20_20)
                             and not player:HasCollectible(CollectibleType.COLLECTIBLE_MUTANT_SPIDER)
@@ -951,6 +980,8 @@ function Lust:UpdateMelee(player)
                         --local doOnceSprite = true
 
                         for _, direction in ipairs(attacks) do
+
+                            pData.TotalAttacksNum = pData.TotalAttacksNum + 1
 
                             --if numAttacks > 1 then
                             lastFireDirection = direction
@@ -1019,6 +1050,24 @@ function Lust:UpdateMelee(player)
                             end
                             if player:HasCollectible(CollectibleType.COLLECTIBLE_BLOOD_CLOT) and pData.CurrentEye == utils.Eyes.LEFT then
                                 damageBonus = damageBonus + 1.0
+                            end
+                            if player:HasCollectible(CollectibleType.COLLECTIBLE_MONSTROS_LUNG) then
+                                damageMultiplier = damageMultiplier + 0.5
+                            end
+                            if player:HasCollectible(CollectibleType.COLLECTIBLE_DEAD_EYE) then
+                                local bonusDeadEye = 0
+
+                                if pData.SuccesfulEnemyHit == 1 then
+                                    bonusDeadEye = 0.25
+                                elseif pData.SuccesfulEnemyHit == 2 then
+                                    bonusDeadEye = 0.5
+                                elseif pData.SuccesfulEnemyHit == 3 then
+                                    bonusDeadEye = 1
+                                elseif pData.SuccesfulEnemyHit >= 4 then
+                                    bonusDeadEye = 2
+                                end
+
+                                damageMultiplier = damageMultiplier + bonusDeadEye
                             end
                             --print("damageBonus: ", damageBonus)
                             --print("damageMultiplier: ", damageMultiplier)

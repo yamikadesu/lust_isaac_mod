@@ -815,6 +815,7 @@ end
 function utils.GetAnimationName(player, weaponSprite)
 	local pData = player:GetData()
 	local animName = ""
+	--[[
 	if string.find(weaponSprite:GetAnimation(), "Idle") then
 		if pData.IsFullCharge then
 			animName = "Long1"
@@ -834,7 +835,20 @@ function utils.GetAnimationName(player, weaponSprite)
 			animName = "Swing2"
 		end
 	end
-
+	]]--
+	if pData.CurrentEye == utils.Eyes.RIGHT then
+		if pData.IsFullCharge then
+			animName = "Long1"
+		else
+			animName = "Swing1"
+		end
+	elseif pData.CurrentEye == utils.Eyes.LEFT then
+		if pData.IsFullCharge then
+			animName = "Long2"
+		else
+			animName = "Swing2"
+		end
+	end
 	if not utils.CheckCrownOfLightStatus(player) then
 		animName = animName .. "Alt"
 	end
@@ -893,14 +907,17 @@ end
 function utils.DamageNearEnemies(source, position, radius, damage, flag, countdown)
 	local ownCollisionIgnoreTime = 5
 	local ownCollisionIgnoreTimeShort = 1
-	for _, enemy in pairs(Isaac.FindInRadius(position, radius, EntityPartition.ENEMY)) do
-		if enemy and utils.IsActiveVulnerableEnemy(enemy) then
-			--print("ENTERED Damaged!!", damage)
-			local player = source.Parent:ToPlayer()
-			if player then 
-				local pData = player:GetData()
-				local tearParams = player:GetTearHitParams(WeaponType.WEAPON_TEARS)
-				utils.AdjustProbabilities(player, tearParams)
+	local player = source.Parent:ToPlayer()
+
+	if player then 
+		local pData = player:GetData()
+		local tearParams = player:GetTearHitParams(WeaponType.WEAPON_TEARS)
+		utils.AdjustProbabilities(player, tearParams)
+		local enemiesHit = 0
+		
+		for _, enemy in pairs(Isaac.FindInRadius(position, radius, EntityPartition.ENEMY)) do
+			if enemy and utils.IsActiveVulnerableEnemy(enemy) then
+				--print("ENTERED Damaged!!", damage)
 				
 				--print("Called correctly A")
 				
@@ -991,13 +1008,32 @@ function utils.DamageNearEnemies(source, position, radius, damage, flag, countdo
 					--print("HAS EXPLOSIVO!")
 					utils.FireTearFromEnemy(player, enemy, tearParams,TearVariant.BELIAL, ownCollisionIgnoreTimeShort)
 				end
+				
+
+				enemy:TakeDamage(
+					damage, 
+					DamageFlag.DAMAGE_COUNTDOWN | (flag or 0), 
+					EntityRef(source), 
+					countdown or 0
+				)
+
+				enemiesHit = enemiesHit + 1
 			end
-			enemy:TakeDamage(
-				damage, 
-				DamageFlag.DAMAGE_COUNTDOWN | (flag or 0), 
-				EntityRef(source), 
-				countdown or 0
-			)
+		end
+
+		if player:HasCollectible(CollectibleType.COLLECTIBLE_DEAD_EYE) then
+			if enemiesHit > 0 then
+				pData.UnsuccesfulEnemyHit = 0
+				pData.SuccesfulEnemyHit = pData.SuccesfulEnemyHit + 1
+			else
+				pData.UnsuccesfulEnemyHit = pData.UnsuccesfulEnemyHit + 1
+				local rand = utils.RandomRange(pData.RNG, 0.0, 1.0) 
+				if (pData.UnsuccesfulEnemyHit <= 1 and rand <= 0.2) or
+				   (pData.UnsuccesfulEnemyHit == 2 and rand <= 0.33) or
+				   (pData.UnsuccesfulEnemyHit >= 3 and rand <= 0.5) then
+					pData.SuccesfulEnemyHit = 0
+				end
+			end
 		end
 	end
 end
