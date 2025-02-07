@@ -1,6 +1,6 @@
 local mod = RegisterMod("Lust (YamikaDesu)", 1) 
 
-local version = "1.1"
+local version = "1.2"
 local debugString = mod.Name .. " V" .. version .. " loaded successfully"
 print(debugString)
 
@@ -114,6 +114,8 @@ function Lust:InitPlayer(player)
         --player:AddNullCostume(costume)
         rng:SetSeed(Game():GetSeeds():GetStartSeed(), RECOMMENDED_SHIFT_IDX)
         local pData = player:GetData()
+        pData.DefaultTearProbability = 0.05
+        pData.MaxTearProbability = 0.5
         pData.MeleeAttackTriggered = false
         pData.MeleeCooldown = 0
         pData.ChargeProgress = 0
@@ -527,6 +529,26 @@ function Lust:PostUpdateMelee(player, lastFireDirection, effectPosAlt)
                 pData.EyeGreedAttacks = pData.EyeGreedAttacks + 1
             end
         end
+        if player:HasCollectible(CollectibleType.COLLECTIBLE_TERRA) then
+            if utils.IsDirectionalShooting(player) then
+                if not pData.terraRockBall then
+                    pData.terraRockBall = Isaac.Spawn(EntityType.ENTITY_TEAR, TearVariant.ROCK, 0, effectPosAlt, Vector.Zero, player):ToTear()
+                    pData.terraRockBall:AddEntityFlags(EntityFlag.FLAG_DONT_OVERWRITE | EntityFlag.FLAG_PERSISTENT)
+                    pData.terraRockBall:AddTearFlags(TearFlags.TEAR_ROCK)  
+                    pData.terraRockBall:FollowParent(player)
+                    pData.terraRockBall.IsFollowing = false
+                end
+                --Lust:RemoveDataEffects(player, pData.brimstoneBall)
+                pData.terraRockBall.Position = effectPosAlt
+                --utils.SetAllTearFlag(player, pData.brimstoneBall, tearParams)
+                pData.terraRockBall.CollisionDamage = player.Damage / directionalDamageReduction
+            else
+                local tearVel = lastFireDirection:Resized(utils.GetShotSpeed(player))
+                local tearSpawned = Isaac.Spawn(EntityType.ENTITY_TEAR, TearVariant.ROCK, 0, effectPosTear, tearVel, player):ToTear()
+                tearSpawned:AddTearFlags(TearFlags.TEAR_ROCK)  
+                tearSpawned.CollisionDamage = player.Damage
+            end
+        end
         if utils.IsUsingWeapon(player, WeaponType.WEAPON_BRIMSTONE)
             and not (utils.IsUsingWeapon(player, WeaponType.WEAPON_TECH_X)
                     or utils.IsUsingWeapon(player, WeaponType.WEAPON_LASER)) then
@@ -687,7 +709,7 @@ function Lust:UpdateMelee(player)
     
             if pData.MeleeWeapon and pData.MeleeWeapon:Exists() then
                 local weaponSprite = pData.MeleeWeapon:GetSprite()
-    
+
                 -- Cargar la barra mientras el botón está pulsado
                 if isShooting then
 

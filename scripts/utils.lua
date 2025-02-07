@@ -917,6 +917,13 @@ function utils.DamageNearEnemies(source, position, radius, damage, flag, countdo
 		
 		for _, enemy in pairs(Isaac.FindInRadius(position, radius, EntityPartition.ENEMY)) do
 			if enemy and utils.IsActiveVulnerableEnemy(enemy) then
+
+				local randTear = utils.RandomRange(pData.RNG, 0.0, 1.0)
+				local probTear = math.max(pData.DefaultTearProbability, math.min(pData.MaxTearProbability, player.Luck / 10.0))
+				if randTear <= probTear then
+					utils.FireTearFromEnemy(player, enemy, tearParams, tearParams.TearVariant, 0)
+				end
+
 				--print("ENTERED Damaged!!", damage)
 				
 				--print("Called correctly A")
