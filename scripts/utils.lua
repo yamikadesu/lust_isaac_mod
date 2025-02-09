@@ -452,6 +452,57 @@ function utils.AnyCharacterHasCollectible(character, collectible, ignoreModifier
 end
 
 
+function utils.ApplyDamageBonus(player, meleeDamageMult, meleeChargeDamageMult, adjustedChargeTime)
+	local pData = player:GetData()
+	local damageBonus = 0.0
+	local damageMultiplier = pData.IsFullCharge and meleeChargeDamageMult or meleeDamageMult  -- Doble daño si está cargado
+	if player:HasCollectible(CollectibleType.COLLECTIBLE_PROPTOSIS) then
+		if pData.IsFullCharge then
+			damageMultiplier = 0.5
+		else 
+			damageMultiplier = 1.5
+		end
+	end
+	if player:HasCollectible(CollectibleType.COLLECTIBLE_CHOCOLATE_MILK) then
+		local percentCharged = pData.ChargeProgress / adjustedChargeTime
+		damageMultiplier = damageMultiplier + percentCharged * 1.5
+	end
+	if player:HasCollectible(CollectibleType.COLLECTIBLE_LUMP_OF_COAL) then
+		damageMultiplier = damageMultiplier + 0.5
+	end
+	if player:HasCollectible(CollectibleType.COLLECTIBLE_STYE) and pData.CurrentEye == utils.Eyes.RIGHT then
+		damageMultiplier = damageMultiplier + 0.28
+	end
+	if player:HasCollectible(CollectibleType.COLLECTIBLE_CHEMICAL_PEEL) and pData.CurrentEye == utils.Eyes.LEFT then
+		damageBonus = damageBonus + 2.0
+	end
+	if player:HasCollectible(CollectibleType.COLLECTIBLE_BLOOD_CLOT) and pData.CurrentEye == utils.Eyes.LEFT then
+		damageBonus = damageBonus + 1.0
+	end
+	if player:HasCollectible(CollectibleType.COLLECTIBLE_MONSTROS_LUNG) then
+		damageMultiplier = damageMultiplier + 0.5
+	end
+	if player:HasCollectible(CollectibleType.COLLECTIBLE_DEAD_EYE) then
+		local bonusDeadEye = 0
+		
+		if pData.SuccesfulEnemyHit == 1 then
+			bonusDeadEye = 0.25
+		elseif pData.SuccesfulEnemyHit == 2 then
+			bonusDeadEye = 0.5
+		elseif pData.SuccesfulEnemyHit == 3 then
+			bonusDeadEye = 1
+		elseif pData.SuccesfulEnemyHit >= 4 then
+			bonusDeadEye = 2
+		end
+		
+		damageMultiplier = damageMultiplier + bonusDeadEye
+	end
+	--print("damageBonus: ", damageBonus)
+	--print("damageMultiplier: ", damageMultiplier)
+	--print("Delay: ", pData.ChargeProgress)
+	return (player.Damage + damageBonus) * damageMultiplier
+end
+
 -- << ENTITY FUNCTIONS >> --
 -- Checks if an entity is an actual enemy
 function utils.IsRealEnemy(entity)
@@ -906,10 +957,152 @@ function utils.AdjustProbabilities(player, tearParams)
 	end
 end
 
--- Damages enemies in a certain radius
-function utils.DamageNearEnemies(source, position, radius, damage, flag, countdown)
+function utils.CharmNearEnemies(source, position, radius)
+	local player = source.Parent:ToPlayer()
+	if player then 
+		local pData = player:GetData()
+		for _, enemy in pairs(Isaac.FindInRadius(position, radius, EntityPartition.ENEMY)) do
+			if enemy and utils.IsActiveVulnerableEnemy(enemy) then
+				local eData = enemy:GetData()
+				if not eData.FriendlyHealth then
+					eData.FriendlyHealth = enemy.HitPoints
+				end
+				if not enemy:HasEntityFlags(EntityFlag.FLAG_FRIENDLY) then
+					if eData.FriendlyHealth <= 0.0 then
+						enemy:AddCharmed(EntityRef(source), -1)
+						enemy:AddEntityFlags(EntityFlag.FLAG_FRIENDLY)
+						SFXManager():Play(SoundEffect.SOUND_POWERUP_SPEWER)
+					else
+						local currentDamage = utils.ApplyDamageBonus(player, 1.0, 1.5, 1.0) / math.max(0.5, pData.FriendlyDamageSpeed / player.ShotSpeed)
+						if enemy:IsBoss() then
+							local tearParams = player:GetTearHitParams(WeaponType.WEAPON_TEARS)
+							utils.AdjustProbabilities(player, tearParams)
+							utils.DamageSpecificEnemy(enemy, source, currentDamage, 0, 0, tearParams)
+						else
+							eData.FriendlyHealth = math.max(0.0, eData.FriendlyHealth - currentDamage)
+						end
+						SFXManager():Play(SoundEffect.SOUND_GOOATTACH0)
+					end
+				end
+			end
+		end
+	end
+end
+
+function utils.DamageSpecificEnemy(enemy, source, damage, flag, countdown, tearParams)
 	local ownCollisionIgnoreTime = 5
 	local ownCollisionIgnoreTimeShort = 1
+	local player = source.Parent:ToPlayer()
+
+	if player then 
+		local pData = player:GetData()
+
+		local randTear = utils.RandomRange(pData.RNG, 0.0, 1.0)
+		local probTear = math.max(pData.DefaultTearProbability, math.min(pData.MaxTearProbability, player.Luck / 10.0))
+		if randTear <= probTear then
+			utils.FireTearFromEnemy(player, enemy, tearParams, tearParams.TearVariant, 0)
+		end
+
+		if player:HasCollectible(CollectibleType.COLLECTIBLE_GODS_FLESH) then
+			--print("Called correctly B")
+			local rand = utils.RandomRange(pData.RNG, 0.0, 1.0)
+			--print("Called correctly C")
+			if rand <= 0.1 then
+				--print("Called correctly D")
+				--utils.SetTearFlag(tearParams, TearFlags.TEAR_SHRINK)
+				enemy:AddShrink(EntityRef(source), 30)
+				--print("Called correctly E")
+			end
+		end
+
+		--print("Called correctly F")
+
+		if utils.HasTearFlag(tearParams, TearFlags.TEAR_POISON) then
+			enemy:AddPoison(EntityRef(source), 30, utils.GetTearDamage(player))
+		end
+		if utils.HasTearFlag(tearParams, TearFlags.TEAR_BURN) then
+			enemy:AddBurn(EntityRef(source), 30, utils.GetTearDamage(player))
+		end
+		if utils.HasTearFlag(tearParams, TearFlags.TEAR_SLOW) then
+			enemy:AddSlowing(EntityRef(source), 30, 0.5, Color(0.68, 0.85, 0.9, 1, 0, 0, 0))
+		end
+		if utils.HasTearFlag(tearParams, TearFlags.TEAR_CONFUSION) then
+			enemy:AddConfusion(EntityRef(source), 30, true)
+		end
+		if utils.HasTearFlag(tearParams, TearFlags.TEAR_FEAR) then
+			enemy:AddFear(EntityRef(source), 30)
+		end
+		if utils.HasTearFlag(tearParams, TearFlags.TEAR_FREEZE) then
+			enemy:AddFreeze(EntityRef(source), 30)
+		end
+		if utils.HasTearFlag(tearParams, TearFlags.TEAR_CHARM) then
+			enemy:AddCharmed(EntityRef(source), 30)
+		end
+		if utils.HasTearFlag(tearParams, TearFlags.TEAR_SHRINK) then
+			--print("HAS SHRINK FLAG!")
+			enemy:AddShrink(EntityRef(source), 30)
+		end
+		if utils.HasTearFlag(tearParams, TearFlags.TEAR_MIDAS) then
+			enemy:AddMidasFreeze(EntityRef(source), 30)
+		end
+		if utils.HasTearFlag(tearParams, TearFlags.TEAR_ICE) then
+			enemy:AddEntityFlags(EntityFlag.FLAG_ICE)
+		end
+		if utils.HasTearFlag(tearParams, TearFlags.TEAR_BAIT) then
+			enemy:AddEntityFlags(EntityFlag.FLAG_BAITED)
+		end
+		if utils.HasTearFlag(tearParams, TearFlags.TEAR_BACKSTAB) then
+			enemy:AddEntityFlags(EntityFlag.FLAG_BLEED_OUT)
+		end
+		if utils.HasTearFlag(tearParams, TearFlags.TEAR_BOOGER) then
+			utils.FireTearFromEnemy(player, enemy, tearParams, TearVariant.BOOGER, 0)
+		end
+		if utils.HasTearFlag(tearParams, TearFlags.TEAR_HORN) then
+			utils.FireTearFromEnemy(player, enemy, tearParams, tearParams.TearVariant, 0)
+		end
+		if utils.HasTearFlag(tearParams, TearFlags.TEAR_RIFT) then
+			--local brimBallVel = lastFireDirection:Resized(utils.GetShotSpeed(player))
+			local effectSpawned = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.RIFT, 0, enemy.Position, Vector.Zero, player):ToEffect()
+			--brimBall:AddVelocity(player:GetTearMovementInheritance(brimBall.Velocity - player.Velocity))
+			effectSpawned:SetTimeout(60)
+			effectSpawned.CollisionDamage = player.Damage * 0.5
+			effectSpawned.Size = player.Damage * 4.0
+			SFXManager():Play(SoundEffect.SOUND_PORTAL_SPAWN)
+		end
+
+		if utils.IsTearVariant(tearParams, TearVariant.NEEDLE) then
+			utils.FireTearFromEnemy(player, enemy, tearParams,TearVariant.NEEDLE, ownCollisionIgnoreTime)
+		end
+		if utils.IsTearVariant(tearParams, TearVariant.BONE) then
+			utils.FireTearFromEnemy(player, enemy, tearParams,TearVariant.BONE, ownCollisionIgnoreTime)
+		end
+		if utils.IsTearVariant(tearParams, TearVariant.TOOTH) then
+			utils.FireTearFromEnemy(player, enemy, tearParams,TearVariant.TOOTH, ownCollisionIgnoreTime)
+		end
+		if utils.IsTearVariant(tearParams, TearVariant.COIN) then
+			utils.FireTearFromEnemy(player, enemy, tearParams,TearVariant.COIN, ownCollisionIgnoreTime)
+		end
+		if utils.HasTearFlag(tearParams, TearFlags.TEAR_STICKY) then
+			--print("HAS EXPLOSIVO!")
+			utils.FireTearFromEnemy(player, enemy, tearParams,TearVariant.EXPLOSIVO, ownCollisionIgnoreTimeShort)
+		end
+		if utils.HasTearFlag(tearParams, TearFlags.TEAR_BELIAL) then
+			--print("HAS EXPLOSIVO!")
+			utils.FireTearFromEnemy(player, enemy, tearParams,TearVariant.BELIAL, ownCollisionIgnoreTimeShort)
+		end
+		
+
+		enemy:TakeDamage(
+			damage, 
+			DamageFlag.DAMAGE_COUNTDOWN | (flag or 0), 
+			EntityRef(source), 
+			countdown or 0
+		)
+	end
+end
+
+-- Damages enemies in a certain radius
+function utils.DamageNearEnemies(source, position, radius, damage, flag, countdown)
 	local player = source.Parent:ToPlayer()
 
 	if player then 
@@ -919,114 +1112,10 @@ function utils.DamageNearEnemies(source, position, radius, damage, flag, countdo
 		local enemiesHit = 0
 		
 		for _, enemy in pairs(Isaac.FindInRadius(position, radius, EntityPartition.ENEMY)) do
-			if enemy and utils.IsActiveVulnerableEnemy(enemy) then
+			if enemy and utils.IsActiveVulnerableEnemy(enemy) and not enemy:HasEntityFlags(EntityFlag.FLAG_FRIENDLY) then
 
-				local randTear = utils.RandomRange(pData.RNG, 0.0, 1.0)
-				local probTear = math.max(pData.DefaultTearProbability, math.min(pData.MaxTearProbability, player.Luck / 10.0))
-				if randTear <= probTear then
-					utils.FireTearFromEnemy(player, enemy, tearParams, tearParams.TearVariant, 0)
-				end
-
-				--print("ENTERED Damaged!!", damage)
+				utils.DamageSpecificEnemy(enemy, source, damage, flag, countdown, tearParams)
 				
-				--print("Called correctly A")
-				
-				if player:HasCollectible(CollectibleType.COLLECTIBLE_GODS_FLESH) then
-					--print("Called correctly B")
-					local rand = utils.RandomRange(pData.RNG, 0.0, 1.0)
-					--print("Called correctly C")
-					if rand <= 0.1 then
-						--print("Called correctly D")
-						--utils.SetTearFlag(tearParams, TearFlags.TEAR_SHRINK)
-						enemy:AddShrink(EntityRef(source), 30)
-						--print("Called correctly E")
-					end
-				end
-
-				--print("Called correctly F")
-
-				if utils.HasTearFlag(tearParams, TearFlags.TEAR_POISON) then
-					enemy:AddPoison(EntityRef(source), 30, utils.GetTearDamage(player))
-				end
-				if utils.HasTearFlag(tearParams, TearFlags.TEAR_BURN) then
-					enemy:AddBurn(EntityRef(source), 30, utils.GetTearDamage(player))
-				end
-				if utils.HasTearFlag(tearParams, TearFlags.TEAR_SLOW) then
-					enemy:AddSlowing(EntityRef(source), 30, 0.5, Color(0.68, 0.85, 0.9, 1, 0, 0, 0))
-				end
-				if utils.HasTearFlag(tearParams, TearFlags.TEAR_CONFUSION) then
-					enemy:AddConfusion(EntityRef(source), 30, true)
-				end
-				if utils.HasTearFlag(tearParams, TearFlags.TEAR_FEAR) then
-					enemy:AddFear(EntityRef(source), 30)
-				end
-				if utils.HasTearFlag(tearParams, TearFlags.TEAR_FREEZE) then
-					enemy:AddFreeze(EntityRef(source), 30)
-				end
-				if utils.HasTearFlag(tearParams, TearFlags.TEAR_CHARM) then
-					enemy:AddCharmed(EntityRef(source), 30)
-				end
-				if utils.HasTearFlag(tearParams, TearFlags.TEAR_SHRINK) then
-					--print("HAS SHRINK FLAG!")
-					enemy:AddShrink(EntityRef(source), 30)
-				end
-				if utils.HasTearFlag(tearParams, TearFlags.TEAR_MIDAS) then
-					enemy:AddMidasFreeze(EntityRef(source), 30)
-				end
-				if utils.HasTearFlag(tearParams, TearFlags.TEAR_ICE) then
-					enemy:AddEntityFlags(EntityFlag.FLAG_ICE)
-				end
-				if utils.HasTearFlag(tearParams, TearFlags.TEAR_BAIT) then
-					enemy:AddEntityFlags(EntityFlag.FLAG_BAITED)
-				end
-				if utils.HasTearFlag(tearParams, TearFlags.TEAR_BACKSTAB) then
-					enemy:AddEntityFlags(EntityFlag.FLAG_BLEED_OUT)
-				end
-				if utils.HasTearFlag(tearParams, TearFlags.TEAR_BOOGER) then
-					utils.FireTearFromEnemy(player, enemy, tearParams, TearVariant.BOOGER, 0)
-				end
-				if utils.HasTearFlag(tearParams, TearFlags.TEAR_HORN) then
-					utils.FireTearFromEnemy(player, enemy, tearParams, tearParams.TearVariant, 0)
-				end
-				if utils.HasTearFlag(tearParams, TearFlags.TEAR_RIFT) then
-					--local brimBallVel = lastFireDirection:Resized(utils.GetShotSpeed(player))
-					local effectSpawned = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.RIFT, 0, enemy.Position, Vector.Zero, player):ToEffect()
-					--brimBall:AddVelocity(player:GetTearMovementInheritance(brimBall.Velocity - player.Velocity))
-					effectSpawned:SetTimeout(60)
-					effectSpawned.CollisionDamage = player.Damage * 0.5
-					effectSpawned.Size = player.Damage * 4.0
-					SFXManager():Play(SoundEffect.SOUND_PORTAL_SPAWN)
-				end
-
-				if utils.IsTearVariant(tearParams, TearVariant.NEEDLE) then
-					utils.FireTearFromEnemy(player, enemy, tearParams,TearVariant.NEEDLE, ownCollisionIgnoreTime)
-				end
-				if utils.IsTearVariant(tearParams, TearVariant.BONE) then
-					utils.FireTearFromEnemy(player, enemy, tearParams,TearVariant.BONE, ownCollisionIgnoreTime)
-				end
-				if utils.IsTearVariant(tearParams, TearVariant.TOOTH) then
-					utils.FireTearFromEnemy(player, enemy, tearParams,TearVariant.TOOTH, ownCollisionIgnoreTime)
-				end
-				if utils.IsTearVariant(tearParams, TearVariant.COIN) then
-					utils.FireTearFromEnemy(player, enemy, tearParams,TearVariant.COIN, ownCollisionIgnoreTime)
-				end
-				if utils.HasTearFlag(tearParams, TearFlags.TEAR_STICKY) then
-					--print("HAS EXPLOSIVO!")
-					utils.FireTearFromEnemy(player, enemy, tearParams,TearVariant.EXPLOSIVO, ownCollisionIgnoreTimeShort)
-				end
-				if utils.HasTearFlag(tearParams, TearFlags.TEAR_BELIAL) then
-					--print("HAS EXPLOSIVO!")
-					utils.FireTearFromEnemy(player, enemy, tearParams,TearVariant.BELIAL, ownCollisionIgnoreTimeShort)
-				end
-				
-
-				enemy:TakeDamage(
-					damage, 
-					DamageFlag.DAMAGE_COUNTDOWN | (flag or 0), 
-					EntityRef(source), 
-					countdown or 0
-				)
-
 				enemiesHit = enemiesHit + 1
 			end
 		end

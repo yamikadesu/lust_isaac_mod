@@ -15,6 +15,7 @@ local costumeFlyingAlt = Isaac.GetCostumeIdByPath("gfx/characters/character_Lust
 local playerType = Isaac.GetPlayerTypeByName("Lust")
 local weapon = Isaac.GetEntityVariantByName("Energy Whip")
 local weaponAttack = Isaac.GetEntityVariantByName("Energy Whip Hitbox")
+local friendlyHalo = Isaac.GetEntityVariantByName("Friendly Halo")
 
 local utils = include("scripts/utils")
 
@@ -50,6 +51,7 @@ local Lust = { -- Change Lorem everywhere to match your character. No spaces!
     DAMAGE = 0, -- These are all relative to Isaac's Lust stats.
     SPEED = 0,
     SHOTSPEED = .5,
+    TEARRANGE = 0,
     TEARHEIGHT = 1,
     TEARFALLINGSPEED = 1,
     LUCK = 0,
@@ -69,6 +71,7 @@ function Lust:OnCache(player, cacheFlag) -- I do mean everywhere!
             player.ShotSpeed = player.ShotSpeed + Lust.SHOTSPEED
         end
         if cacheFlag == CacheFlag.CACHE_RANGE then
+            player.TearRange = player.TearRange + Lust.TEARRANGE
             player.TearHeight = player.TearHeight - Lust.TEARHEIGHT
             player.TearFallingSpeed = player.TearFallingSpeed + Lust.TEARFALLINGSPEED
         end
@@ -143,6 +146,10 @@ function Lust:InitPlayer(player)
         pData.DrFetusBombDirectional = nil
         pData.SpawnedFireDirectional = nil
         pData.IsNewRoom = true
+        pData.FriendlyHalo = nil
+        pData.FriendlyDamageSpeed = 4.0
+        --pData.FriendlyDamageDelay = 4
+        pData.FriendlyDamageDelayTemp = 0
         pData.MeleeLastFireDirection = Vector(0,0)
         --pData.MawOfVoidReady = false
         Lust:RemoveDataEffects(player)
@@ -271,10 +278,11 @@ end
 
 -- Gestiona el comportamiento de los efectos del ataque a melee
 function Lust:UpdateEffect(effect)
-    if effect.Variant == weaponAttack or effect.Variant == weapon then
-        if effect.Parent and effect.Parent:ToPlayer() then
-            local player = effect.Parent:ToPlayer()
-            if player:GetPlayerType() == playerType then
+    if effect.Parent and effect.Parent:ToPlayer() then
+        local player = effect.Parent:ToPlayer()
+        if player:GetPlayerType() == playerType then
+            local pData = player:GetData()
+            if effect.Variant == weaponAttack or effect.Variant == weapon then
                 if utils.IsDirectionalShooting(player) and effect.Variant == weapon then
                     --if meleeCanCollect and not player:IsCoopGhost() then
                     --    utils.CollectNearPickups(player, effect.Position, effect.Size, meleeKnockback, meleeDelayGrabbingFrames, 6)
@@ -300,6 +308,13 @@ function Lust:UpdateEffect(effect)
                         effect.EntityCollisionClass = EntityCollisionClass.ENTCOLL_ALL
                     end
                     if effect.Timeout <= 0 then effect:Remove() end
+                end
+            elseif effect.Variant == friendlyHalo then
+                if pData.FriendlyDamageDelayTemp >= (player.MaxFireDelay + 1.0) / 2.0 then
+                    pData.FriendlyDamageDelayTemp = 0
+                    utils.CharmNearEnemies(effect, effect.Position, effect.Size)
+                else
+                    pData.FriendlyDamageDelayTemp = pData.FriendlyDamageDelayTemp + 1
                 end
             end
         end
@@ -482,7 +497,11 @@ function Lust:PostUpdateMelee(player, lastFireDirection, effectPosAlt)
                 local zitCreep = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.PLAYER_CREEP_WHITE, 0, effectPos, Vector.Zero, player):ToEffect()
             end
         end
-
+        if player:HasCollectible(CollectibleType.COLLECTIBLE_BIRTHRIGHT) then
+            if utils.IsDirectionalShooting(player) then
+                pData.FriendlyHalo.Position = effectPosAlt
+            end
+        end
         if utils.HasTearFlag(tearParams, TearFlags.TEAR_FETUS) 
             or utils.IsUsingWeapon(player, WeaponType.WEAPON_FETUS) then
             --print("SHOT TEAR FETUS!")
@@ -1136,53 +1155,10 @@ function Lust:UpdateMelee(player)
                             hitbox:SetDamageSource(EntityType.ENTITY_PLAYER)
         
                             -- Ajustar el daño del ataque
-                            local damageBonus = 0.0
-                            local damageMultiplier = pData.IsFullCharge and meleeChargeDamageMult or meleeDamageMult  -- Doble daño si está cargado
-                            if player:HasCollectible(CollectibleType.COLLECTIBLE_PROPTOSIS) then
-                                if pData.IsFullCharge then
-                                    damageMultiplier = 0.5
-                                else 
-                                    damageMultiplier = 1.5
-                                end
-                            end
-                            if player:HasCollectible(CollectibleType.COLLECTIBLE_CHOCOLATE_MILK) then
-                                local percentCharged = pData.ChargeProgress / adjustedChargeTime
-                                damageMultiplier = damageMultiplier + percentCharged * 1.5
-                            end
-                            if player:HasCollectible(CollectibleType.COLLECTIBLE_LUMP_OF_COAL) then
-                                damageMultiplier = damageMultiplier + 0.5
-                            end
-                            if player:HasCollectible(CollectibleType.COLLECTIBLE_STYE) and pData.CurrentEye == utils.Eyes.RIGHT then
-                                damageMultiplier = damageMultiplier + 0.28
-                            end
-                            if player:HasCollectible(CollectibleType.COLLECTIBLE_CHEMICAL_PEEL) and pData.CurrentEye == utils.Eyes.LEFT then
-                                damageBonus = damageBonus + 2.0
-                            end
-                            if player:HasCollectible(CollectibleType.COLLECTIBLE_BLOOD_CLOT) and pData.CurrentEye == utils.Eyes.LEFT then
-                                damageBonus = damageBonus + 1.0
-                            end
-                            if player:HasCollectible(CollectibleType.COLLECTIBLE_MONSTROS_LUNG) then
-                                damageMultiplier = damageMultiplier + 0.5
-                            end
-                            if player:HasCollectible(CollectibleType.COLLECTIBLE_DEAD_EYE) then
-                                local bonusDeadEye = 0
-                                
-                                if pData.SuccesfulEnemyHit == 1 then
-                                    bonusDeadEye = 0.25
-                                elseif pData.SuccesfulEnemyHit == 2 then
-                                    bonusDeadEye = 0.5
-                                elseif pData.SuccesfulEnemyHit == 3 then
-                                    bonusDeadEye = 1
-                                elseif pData.SuccesfulEnemyHit >= 4 then
-                                    bonusDeadEye = 2
-                                end
-                                
-                                damageMultiplier = damageMultiplier + bonusDeadEye
-                            end
                             --print("damageBonus: ", damageBonus)
                             --print("damageMultiplier: ", damageMultiplier)
                             --print("Delay: ", pData.ChargeProgress)
-                            hitbox.CollisionDamage = (player.Damage + damageBonus) * damageMultiplier
+                            hitbox.CollisionDamage = utils.ApplyDamageBonus(player, meleeDamageMult, meleeChargeDamageMult, adjustedChargeTime)
                             hitbox:SetTimeout(meleeTimeout)
                             --hitbox:Update()
                             -- Actualización de tiempos y estados
@@ -1300,6 +1276,34 @@ function Lust:RenderPlayer(player)
                 pData.IsRenderChanged = false
             end
             pData.IsDeadFirstCheck = true
+        end
+
+        if player:HasCollectible(CollectibleType.COLLECTIBLE_BIRTHRIGHT) then
+            if not pData.FriendlyHalo and pData.IsCrownActive then
+                local headPosition = player.Position + Vector(0, player.TearHeight)
+                pData.FriendlyHalo = Isaac.Spawn(EntityType.ENTITY_EFFECT, friendlyHalo, 1, headPosition, Vector.Zero, player):ToEffect()
+                pData.FriendlyHalo:AddEntityFlags(EntityFlag.FLAG_DONT_OVERWRITE | EntityFlag.FLAG_PERSISTENT)
+                pData.FriendlyHalo:FollowParent(player)
+                pData.FriendlyHalo.Color = Color(0.2, 1.0, 1.0, 0.7, 0, 0, 0) 
+                --pData.FriendlyHalo.ParentOffset = Vector(0, meleeOffset)
+            end
+
+            if pData.FriendlyHalo then
+                if not pData.IsCrownActive then
+                    pData.FriendlyHalo:Remove()
+                    pData.FriendlyHalo = nil
+                else 
+                    if utils.IsDirectionalShooting(player) then
+                        pData.FriendlyHalo.IsFollowing = false
+                    else
+                        pData.FriendlyHalo.IsFollowing = true
+                    end
+                    local sizeRange = player.TearRange / 6.0
+                    pData.FriendlyHalo:SetSize(sizeRange, pData.FriendlyHalo.SizeMulti, 12)
+                    --pData.FriendlyHalo.SpriteScale = sizeRange / 40.0 * pData.FriendlyHalo.SizeMulti
+                    pData.FriendlyHalo.SpriteScale = sizeRange / 40.0 * pData.FriendlyHalo.SizeMulti
+                end
+            end
         end
 
         if not utils.IsDirectionalShooting(player) and Options.ChargeBars and pData.ChargeBar then

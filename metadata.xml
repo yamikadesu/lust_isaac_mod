@@ -10,7 +10,7 @@ The character's name is Lust (not to be confused with the boss Lust xD), he just
 P.D.:
 Just in case, there are some synergies that are a little more difficult to find, for example Spoon Bender provides homing tears but if you only have that item you won't be able to see its effect obviously, you can appreciate its effect when you synergize with another item such as example Tough Love since this item is modified in this mod making that the enemies release teeth when hit, so if you also have Spoon Bender then those teeth will be homing! You can try to create curious synergies and let me know if you have any suggestions! ^^
 
-PD2 : From v1.2 there is now a small chance (initially 5% that increases to a maximum of 50% with 10 Luck) that hits made on enemies will cause them to release tears from pain, these tears will have the properties of Lust's tears, so now items that added tear properties will be useful even if there are no additional items like Tough Love)
+P.D.2 : From v1.2 there is now a small chance (initially 5% that increases to a maximum of 50% with 10 Luck) that hits made on enemies will cause them to release tears from pain, these tears will have the properties of Lust's tears, so now items that added tear properties will be useful even if there are no additional items like Tough Love)
 
 The sprites have been drawn by https://x.com/Freezepop88
 
@@ -19,7 +19,7 @@ The cover art has been drawn by Yaku
 And the trailer video and cover gif has been made by https://x.com/Moshi_Shian 
 
 If you find any bug or mod suggestion don't hesitate to comment it!</description>
-    <version>1.2</version>
+    <version>1.3</version>
     <visibility>Public</visibility>
     <tag id="Lua"/>
     <tag id="Player Characters"/>
