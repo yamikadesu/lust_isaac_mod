@@ -1,6 +1,6 @@
 local mod = RegisterMod("Lust (YamikaDesu)", 1) 
 
-local version = "1.2"
+local version = "1.3"
 local debugString = mod.Name .. " V" .. version .. " loaded successfully"
 print(debugString)
 
@@ -378,9 +378,11 @@ function Lust:PostUpdateMelee(player, lastFireDirection, effectPosAlt)
         local bothItems = player:HasCollectible(CollectibleType.COLLECTIBLE_GHOST_PEPPER) and player:HasCollectible(CollectibleType.COLLECTIBLE_BIRDS_EYE)
 
         -- Si tiene ambos ítems, ajustamos la probabilidad para ambos tipos de fuego
-        local prob = math.max(0.0833, math.min(0.5, player.Luck/10.0))
+        -- math.max(0.0833, math.min(0.5, player.Luck/10.0))
+        local prob = utils.RandomLuck(player.Luck, 0.0833, 0.5, 10.0)
         if bothItems then
-            prob = math.max(0.125, math.min(1.0, player.Luck/7.0))
+            -- math.max(0.125, math.min(1.0, player.Luck/7.0))
+            prob = utils.RandomLuck(player.Luck, 0.125, 1.0, 7.0)
         end
         if player:HasCollectible(CollectibleType.COLLECTIBLE_GHOST_PEPPER) then
             --print("HAS GHOST PEPPER!")
@@ -476,7 +478,7 @@ function Lust:PostUpdateMelee(player, lastFireDirection, effectPosAlt)
         if player:HasCollectible(CollectibleType.COLLECTIBLE_LARGE_ZIT) then
             local probShot = 0.1 -- Specify the prob of the large zit attack
             local rand = utils.RandomRange(rng, 0.0, 1.0)
-            if rand <= prob then
+            if rand <= probShot then
                 local zitCreep = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.PLAYER_CREEP_WHITE, 0, effectPos, Vector.Zero, player):ToEffect()
             end
         end
@@ -515,18 +517,64 @@ function Lust:PostUpdateMelee(player, lastFireDirection, effectPosAlt)
             --end
         end
         if player:HasCollectible(CollectibleType.COLLECTIBLE_EYE_OF_GREED) then
-            if pData.EyeGreedAttacks >= 19 then
-                if player:GetNumCoins() > 0 then
-                    player:AddCoins(-1)
+            if utils.IsDirectionalShooting(player) then
+                --local probTear = 0.02 
+                --local rand = utils.RandomRange(rng, 0.0, 1.0)
+                if pData.EyeGreedAttacks >= 199 then
+                    local tearVel = lastFireDirection:Resized(utils.GetShotSpeed(player))
+                    local tearSpawned = Isaac.Spawn(EntityType.ENTITY_TEAR, TearVariant.COIN, 0, effectPosTear, tearVel, player):ToTear()
+                    tearSpawned:AddTearFlags(TearFlags.TEAR_MIDAS | TearFlags.TEAR_GREED_COIN)  
+                    tearSpawned.CollisionDamage = player.Damage
+                    pData.EyeGreedAttacks = 0
+                else
+                    pData.EyeGreedAttacks = pData.EyeGreedAttacks + 1
                 end
-                local tearVel = lastFireDirection:Resized(utils.GetShotSpeed(player))
-                local tearSpawned = Isaac.Spawn(EntityType.ENTITY_TEAR, TearVariant.COIN, 0, effectPosTear, tearVel, player):ToTear()
-                tearSpawned:AddTearFlags(TearFlags.TEAR_MIDAS | TearFlags.TEAR_GREED_COIN)  
-                tearSpawned.CollisionDamage = player.Damage
-                --tearSpawned:SetTimeout(30)
-                pData.EyeGreedAttacks = 0
             else
-                pData.EyeGreedAttacks = pData.EyeGreedAttacks + 1
+                if pData.EyeGreedAttacks >= 19 then
+                    if player:GetNumCoins() > 0 then
+                        player:AddCoins(-1)
+                    end
+                    local tearVel = lastFireDirection:Resized(utils.GetShotSpeed(player))
+                    local tearSpawned = Isaac.Spawn(EntityType.ENTITY_TEAR, TearVariant.COIN, 0, effectPosTear, tearVel, player):ToTear()
+                    tearSpawned:AddTearFlags(TearFlags.TEAR_MIDAS | TearFlags.TEAR_GREED_COIN)  
+                    tearSpawned.CollisionDamage = player.Damage
+                    --tearSpawned:SetTimeout(30)
+                    pData.EyeGreedAttacks = 0
+                else
+                    pData.EyeGreedAttacks = pData.EyeGreedAttacks + 1
+                end
+            end
+        end
+        if player:HasCollectible(CollectibleType.COLLECTIBLE_IMMACULATE_HEART) then
+            local probImmHeart = 0.2 
+            if utils.IsDirectionalShooting(player) then
+                probImmHeart = 0.02
+            end
+            local rand = utils.RandomRange(rng, 0.0, 1.0)
+            if rand <= probImmHeart then
+                local tearVel = lastFireDirection:Resized(utils.GetShotSpeed(player))
+                local tearSpawned = Isaac.Spawn(EntityType.ENTITY_TEAR, TearVariant.BLUE, 0, effectPosTear, tearVel, player):ToTear()
+                tearSpawned:AddTearFlags(TearFlags.TEAR_SPECTRAL | TearFlags.TEAR_ORBIT_ADVANCED) 
+                tearSpawned.CollisionDamage = player.Damage
+            end
+        end
+        if player:HasCollectible(CollectibleType.COLLECTIBLE_HOLY_LIGHT) then
+            if utils.IsDirectionalShooting(player) then
+                local probLight = utils.RandomLuck(player.Luck, 0.01, 0.05, 9.0)
+                local rand = utils.RandomRange(rng, 0.0, 1.0)
+                if rand <= probLight then
+                    local lightSpawned = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.CRACK_THE_SKY, 0, effectPosAlt, Vector.Zero, player):ToEffect()
+                    lightSpawned.CollisionDamage = 3.0 * player.Damage
+                    SFXManager():Play(SoundEffect.SOUND_ANGEL_BEAM)
+                end
+            else
+                local probLight = utils.RandomLuck(player.Luck, 0.1, 0.5, 9.0)
+                local rand = utils.RandomRange(rng, 0.0, 1.0)
+                if rand <= probLight then
+                    local lightSpawned = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.CRACK_THE_SKY, 0, effectPos, Vector.Zero, player):ToEffect()
+                    lightSpawned.CollisionDamage = 3.0 * player.Damage
+                    SFXManager():Play(SoundEffect.SOUND_ANGEL_BEAM)
+                end
             end
         end
         if player:HasCollectible(CollectibleType.COLLECTIBLE_TERRA) then
@@ -535,13 +583,17 @@ function Lust:PostUpdateMelee(player, lastFireDirection, effectPosAlt)
                     pData.terraRockBall = Isaac.Spawn(EntityType.ENTITY_TEAR, TearVariant.ROCK, 0, effectPosAlt, Vector.Zero, player):ToTear()
                     pData.terraRockBall:AddEntityFlags(EntityFlag.FLAG_DONT_OVERWRITE | EntityFlag.FLAG_PERSISTENT)
                     pData.terraRockBall:AddTearFlags(TearFlags.TEAR_ROCK)  
-                    pData.terraRockBall:FollowParent(player)
-                    pData.terraRockBall.IsFollowing = false
+                    --pData.terraRockBall:FollowParent(player)
+                    --pData.terraRockBall.IsFollowing = false
                 end
                 --Lust:RemoveDataEffects(player, pData.brimstoneBall)
                 pData.terraRockBall.Position = effectPosAlt
                 --utils.SetAllTearFlag(player, pData.brimstoneBall, tearParams)
                 pData.terraRockBall.CollisionDamage = player.Damage / directionalDamageReduction
+                if pData.terraRockBall and pData.terraRockBall:IsDead() then
+                    pData.terraRockBall:Remove() 
+                    pData.terraRockBall = nil
+                end
             else
                 local tearVel = lastFireDirection:Resized(utils.GetShotSpeed(player))
                 local tearSpawned = Isaac.Spawn(EntityType.ENTITY_TEAR, TearVariant.ROCK, 0, effectPosTear, tearVel, player):ToTear()
@@ -707,8 +759,24 @@ function Lust:UpdateMelee(player)
             -- Detectamos si el jugador ha soltado el disparo
             local hasReleased = not isShooting and pData.WasShooting
     
+            local inverseCharge = player:HasCollectible(CollectibleType.COLLECTIBLE_NEPTUNUS)
+
             if pData.MeleeWeapon and pData.MeleeWeapon:Exists() then
                 local weaponSprite = pData.MeleeWeapon:GetSprite()
+
+                if inverseCharge then
+                    -- Incrementar el tiempo de espera antes de cargar la barra
+                    pData.ChargeStartDelay = math.min(pData.ChargeStartDelay + 1, meleeChargeInitDelay) -- Retraso de 30 frames (medio segundo a 60 FPS)
+
+                    if pData.ChargeStartDelay >= meleeChargeInitDelay then
+                        if pData.DoOnceChargingSound then
+                            SFXManager():Play(SoundEffect.SOUND_LIGHTBOLT_CHARGE)
+                            pData.DoOnceChargingSound = false
+                        end
+                        pData.ChargeProgress = math.min(pData.ChargeBar.chargeProgress + 1, adjustedChargeTime) -- Incrementa progresivamente hasta 100
+                        pData.ChargeBar:SetCharge(pData.ChargeProgress, adjustedChargeTime) -- Actualiza la barra
+                    end
+                end
 
                 -- Cargar la barra mientras el botón está pulsado
                 if isShooting then
@@ -719,18 +787,22 @@ function Lust:UpdateMelee(player)
                         pData.MeleeLastFireDirection = fireDirection
                     end
                     
-                    -- Incrementar el tiempo de espera antes de cargar la barra
-                    pData.ChargeStartDelay = math.min(pData.ChargeStartDelay + 1, meleeChargeInitDelay) -- Retraso de 30 frames (medio segundo a 60 FPS)
-                    
-                    -- Si ha pasado el tiempo de espera, empieza a cargar la barra
-                    if pData.ChargeStartDelay >= meleeChargeInitDelay then
-                        if pData.DoOnceChargingSound then
-                            SFXManager():Play(SoundEffect.SOUND_LIGHTBOLT_CHARGE)
-                            pData.DoOnceChargingSound = false
+                    if not inverseCharge then
+                        -- Incrementar el tiempo de espera antes de cargar la barra
+                        pData.ChargeStartDelay = math.min(pData.ChargeStartDelay + 1, meleeChargeInitDelay) -- Retraso de 30 frames (medio segundo a 60 FPS)
+                        
+                        -- Si ha pasado el tiempo de espera, empieza a cargar la barra
+                        if pData.ChargeStartDelay >= meleeChargeInitDelay then
+                            if pData.DoOnceChargingSound then
+                                SFXManager():Play(SoundEffect.SOUND_LIGHTBOLT_CHARGE)
+                                pData.DoOnceChargingSound = false
+                            end
+                            pData.ChargeProgress = math.min(pData.ChargeBar.chargeProgress + 1, adjustedChargeTime) -- Incrementa progresivamente hasta 100
+                            pData.ChargeBar:SetCharge(pData.ChargeProgress, adjustedChargeTime) -- Actualiza la barra
                         end
-                        pData.ChargeProgress = math.min(pData.ChargeBar.chargeProgress + 1, adjustedChargeTime) -- Incrementa progresivamente hasta 100
-                        pData.ChargeBar:SetCharge(pData.ChargeProgress, adjustedChargeTime) -- Actualiza la barra
+
                     end
+
 
                     --local timeToSpawnMawVoid = 45
                     pData.TimeAttacking = pData.TimeAttacking + 1
@@ -753,12 +825,19 @@ function Lust:UpdateMelee(player)
                     end
                 else
                     -- Resetear la barra si el botón se ha soltado
-                    pData.ChargeBar:SetCharge(0, adjustedChargeTime)
-                    pData.ChargeStartDelay = 0
+                    if not inverseCharge then
+                        pData.ChargeBar:SetCharge(0, adjustedChargeTime)
+                        pData.ChargeStartDelay = 0
+                    end
                 end
                 
                 -- Si soltó el disparo, ejecuta el ataque
                 if hasReleased then
+                    if inverseCharge then
+                        pData.ChargeBar:SetCharge(0, adjustedChargeTime)
+                        pData.ChargeStartDelay = 0
+                    end
+
                     if pData.DeadToothRing then
                         pData.DeadToothRing:Remove()
                         pData.DeadToothRing = nil
@@ -805,7 +884,8 @@ function Lust:UpdateMelee(player)
 
                         if player:HasCollectible(CollectibleType.COLLECTIBLE_MOMS_EYE) then
                             local rand = utils.RandomRange(rng, 0.0, 1.0)
-                            local prob = math.max(0.0, math.min(1.0, player.Luck / 2.0))
+                            --local prob = math.max(0.0, math.min(1.0, player.Luck / 2.0))
+                            local prob = utils.RandomLuck(player.Luck, 0.0, 1.0, 2.0)
                             if rand <= prob then
                                 local oppositeDirection = Vector(lastFireDirection.X * -1.0, lastFireDirection.X * -1.0)
                                 if not utils.ContainsDirection(attacks, oppositeDirection) then
@@ -816,7 +896,8 @@ function Lust:UpdateMelee(player)
 
                         if player:HasCollectible(CollectibleType.COLLECTIBLE_LOKIS_HORNS) then
                             local rand = utils.RandomRange(rng, 0.0, 1.0)
-                            local prob = math.max(0.125, math.min(1.0, (player.Luck+5.0) / 20.0))
+                            --local prob = math.max(0.125, math.min(1.0, (player.Luck+5.0) / 20.0))
+                            local prob = utils.RandomLuck(player.Luck + 5.0, 0.125, 1.0, 20.0)
                             --print("rand: ", rand)
                             --print("prob: ", prob)
                             if rand <= prob then
@@ -1057,6 +1138,13 @@ function Lust:UpdateMelee(player)
                             -- Ajustar el daño del ataque
                             local damageBonus = 0.0
                             local damageMultiplier = pData.IsFullCharge and meleeChargeDamageMult or meleeDamageMult  -- Doble daño si está cargado
+                            if player:HasCollectible(CollectibleType.COLLECTIBLE_PROPTOSIS) then
+                                if pData.IsFullCharge then
+                                    damageMultiplier = 0.5
+                                else 
+                                    damageMultiplier = 1.5
+                                end
+                            end
                             if player:HasCollectible(CollectibleType.COLLECTIBLE_CHOCOLATE_MILK) then
                                 local percentCharged = pData.ChargeProgress / adjustedChargeTime
                                 damageMultiplier = damageMultiplier + percentCharged * 1.5
@@ -1078,7 +1166,7 @@ function Lust:UpdateMelee(player)
                             end
                             if player:HasCollectible(CollectibleType.COLLECTIBLE_DEAD_EYE) then
                                 local bonusDeadEye = 0
-
+                                
                                 if pData.SuccesfulEnemyHit == 1 then
                                     bonusDeadEye = 0.25
                                 elseif pData.SuccesfulEnemyHit == 2 then
@@ -1088,7 +1176,7 @@ function Lust:UpdateMelee(player)
                                 elseif pData.SuccesfulEnemyHit >= 4 then
                                     bonusDeadEye = 2
                                 end
-
+                                
                                 damageMultiplier = damageMultiplier + bonusDeadEye
                             end
                             --print("damageBonus: ", damageBonus)

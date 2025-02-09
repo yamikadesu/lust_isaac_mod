@@ -105,6 +105,9 @@ function utils.RandomRange(rng, minimum, maximum)
 	return minimum + rng:RandomFloat() * (maximum - minimum)
 end
 
+function utils.RandomLuck(baseLuck, minimum, maximum, maxLuck)
+	return math.max(minimum, math.min(maximum, baseLuck / maxLuck))
+end
 
 -- << VECTOR FUNCTIONS >> --
 -- Converts a given vector to a corresponding direction
@@ -1082,7 +1085,7 @@ function utils.DestroyNearGrid(effect, position, radius)
 
 		for _, gridEntity in ipairs(entitiesInRange) do
 			if utils.HasTearFlag(tearParams, TearFlags.TEAR_ACID) then
-				print("IS ACID FLAG!")
+				--print("IS ACID FLAG!")
 				if gridEntity:GetType() == GridEntityType.GRID_ROCK 
 					or gridEntity:GetType() == GridEntityType.GRID_ROCKB 
 					or gridEntity:GetType() == GridEntityType.GRID_ROCKT 
