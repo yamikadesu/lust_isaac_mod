@@ -1,6 +1,6 @@
 local mod = RegisterMod("Lust (YamikaDesu)", 1) 
 
-local version = "1.3"
+local version = "1.4"
 local debugString = mod.Name .. " V" .. version .. " loaded successfully"
 print(debugString)
 
