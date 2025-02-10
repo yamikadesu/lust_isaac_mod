@@ -1,6 +1,6 @@
 local mod = RegisterMod("Lust (YamikaDesu)", 1) 
 
-local version = "1.4"
+local version = "1.5"
 local debugString = mod.Name .. " V" .. version .. " loaded successfully"
 print(debugString)
 
@@ -19,6 +19,7 @@ local friendlyHalo = Isaac.GetEntityVariantByName("Friendly Halo")
 
 local utils = include("scripts/utils")
 
+local game = Game()
 local rng = RNG()
 local RECOMMENDED_SHIFT_IDX = 35
 
@@ -122,6 +123,7 @@ function Lust:InitPlayer(player)
         pData.MeleeAttackTriggered = false
         pData.MeleeCooldown = 0
         pData.ChargeProgress = 0
+        pData.ChargingValue = 0
         pData.DoOnceChargingSound = true
         pData.IsCrownActive = true
         pData.IsRenderChanged = true
@@ -358,6 +360,8 @@ function Lust:PostUpdateMelee(player, lastFireDirection, effectPosAlt)
         if not utils.IsDirectionalShooting(player) then
             Lust:RemoveDataEffects(player)
         end
+
+        local headDirection = utils.VectorToDirection(lastFireDirection)
         --local fireDirection, lastFireDirection = utils.GetShootingDirection(player)
         local effectPos = player.Position + lastFireDirection:Resized(meleeDistance) 
         local effectPosTear = effectPos + player.TearsOffset + Vector(0, player.TearHeight) 
@@ -498,8 +502,10 @@ function Lust:PostUpdateMelee(player, lastFireDirection, effectPosAlt)
             end
         end
         if player:HasCollectible(CollectibleType.COLLECTIBLE_BIRTHRIGHT) then
-            if utils.IsDirectionalShooting(player) then
-                pData.FriendlyHalo.Position = effectPosAlt
+            if pData.FriendlyHalo then
+                if utils.IsDirectionalShooting(player) then
+                    pData.FriendlyHalo.Position = effectPosAlt
+                end
             end
         end
         if utils.HasTearFlag(tearParams, TearFlags.TEAR_FETUS) 
@@ -594,6 +600,65 @@ function Lust:PostUpdateMelee(player, lastFireDirection, effectPosAlt)
                     lightSpawned.CollisionDamage = 3.0 * player.Damage
                     SFXManager():Play(SoundEffect.SOUND_ANGEL_BEAM)
                 end
+            end
+        end
+        if player:HasCollectible(CollectibleType.COLLECTIBLE_EVIL_EYE) then
+            if utils.IsDirectionalShooting(player) then
+                if not pData.evilEyeBall then
+                    pData.evilEyeBall = Isaac.Spawn(EntityType.ENTITY_EFFECT, TearVariant.ROCK, 0, effectPosAlt, Vector.Zero, player):ToEffect()
+                    pData.evilEyeBall:AddEntityFlags(EntityFlag.FLAG_DONT_OVERWRITE | EntityFlag.FLAG_PERSISTENT)
+                end
+                pData.evilEyeBall.Position = effectPosAlt
+                pData.evilEyeBall:GetSprite():Stop()
+                if headDirection == Direction.LEFT then
+                    pData.evilEyeBall:GetSprite():Play("ShootSide", true)
+                    pData.evilEyeBall:GetSprite().FlipX = true
+                elseif headDirection == Direction.UP then
+                    pData.evilEyeBall:GetSprite():Play("ShootUp", true)
+                    pData.evilEyeBall:GetSprite().FlipX = false
+                elseif headDirection == Direction.RIGHT then
+                    pData.evilEyeBall:GetSprite():Play("ShootSide", true)
+                    pData.evilEyeBall:GetSprite().FlipX = false
+                elseif headDirection == Direction.DOWN then
+                    pData.evilEyeBall:GetSprite():Play("ShootDown", true)
+                    pData.evilEyeBall:GetSprite().FlipX = false
+                end
+                local tearVel = utils.DirectionToVector[headDirection]:Resized(utils.GetShotSpeed(player, 1.0)*10.0)
+                player:FireTear(pData.evilEyeBall.Position, tearVel)
+                if pData.evilEyeBall and pData.evilEyeBall:IsDead() then
+                    pData.evilEyeBall:Remove() 
+                    pData.evilEyeBall = nil
+                end
+            else
+                local probLight = utils.RandomLuck(player.Luck, 0.0333, 0.10, 20.0)
+                local rand = utils.RandomRange(rng, 0.0, 1.0)
+                if rand <= probLight then
+                    local tearVel = lastFireDirection:Resized(utils.GetShotSpeed(player, 1.0)*3.0)
+                    local lightSpawned = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.EVIL_EYE, 0, effectPosTear, tearVel, player):ToEffect()
+                end
+                for _, roomEntity in pairs(Isaac.GetRoomEntities()) do
+                    if roomEntity.Variant == EffectVariant.EVIL_EYE and roomEntity.SpawnerEntity then
+                        local playerOwner = roomEntity.SpawnerEntity:ToPlayer()
+                        if playerOwner and GetPtrHash(playerOwner) == GetPtrHash(player) then
+                            roomEntity:GetSprite():Stop()
+                            if headDirection == Direction.LEFT then
+                                roomEntity:GetSprite():Play("ShootSide", true)
+                                roomEntity:GetSprite().FlipX = true
+                            elseif headDirection == Direction.UP then
+                                roomEntity:GetSprite():Play("ShootUp", true)
+                                roomEntity:GetSprite().FlipX = false
+                            elseif headDirection == Direction.RIGHT then
+                                roomEntity:GetSprite():Play("ShootSide", true)
+                                roomEntity:GetSprite().FlipX = false
+                            elseif headDirection == Direction.DOWN then
+                                roomEntity:GetSprite():Play("ShootDown", true)
+                                roomEntity:GetSprite().FlipX = false
+                            end
+                            local tearVel = utils.DirectionToVector[headDirection]:Resized(utils.GetShotSpeed(player, 1.0)*10.0)
+                            player:FireTear(roomEntity.Position, tearVel)
+                        end
+                    end
+                end 
             end
         end
         if player:HasCollectible(CollectibleType.COLLECTIBLE_TERRA) then
@@ -740,14 +805,16 @@ function Lust:UpdateMelee(player)
         if fireDelay == 0 then 
             fireDelay = 0.1
         end
-
+        
         -- Usamos una interpolación inversa para ajustar el tiempo de carga
         local adjustedChargeTime = math.max(
             (fireDelay * (meleeChargeMaxTime / 10)),
             meleeChargeMinTime
         )
-
+        pData.ChargingValue = math.max(0.0, math.min(1.0, pData.ChargeProgress / adjustedChargeTime))
+        
         local fireInput = player:GetShootingInput()
+
         local fireDirection, lastFireDirection = utils.GetShootingDirection(player)
         local isShooting = fireDirection:Length() > 0.2 or (fireInput:Length() > 0.2 and fireDirection:Length() > 0.2)
 
@@ -850,6 +917,7 @@ function Lust:UpdateMelee(player)
                     end
                 end
                 
+
                 -- Si soltó el disparo, ejecuta el ataque
                 if hasReleased then
                     if inverseCharge then
@@ -1053,6 +1121,22 @@ function Lust:UpdateMelee(player)
                             end
                         end
 
+                        if player:HasCollectible(CollectibleType.COLLECTIBLE_CURSED_EYE) then
+                            local numberAttacks = math.max(0, math.min(4, pData.ChargingValue / 0.25))
+
+                            local angles = {-15, -5, 5, 15}
+
+                            while numberAttacks > 0 do
+                                local angle = utils.ChooseRemove(rng, angles)
+                                local attackDirection = utils.RotateVector(lastFireDirection, angle)
+                                if not utils.ContainsDirection(attacks, attackDirection) then
+                                    table.insert(attacks, attackDirection)
+                                    --numAttacks = numAttacks + 1
+                                end
+                                numberAttacks = numberAttacks - 1 
+                            end
+                        end
+
                         if player:HasCollectible(CollectibleType.COLLECTIBLE_MUTANT_SPIDER) then
                             -- Angulos en grados para los disparos en forma de abanico
                             local angles = {-25, -15, 15, 25}
@@ -1213,6 +1297,9 @@ function Lust:UpdateMelee(player)
             pData.WasShooting = isShooting
         end
 
+        if not isShooting then
+            pData.ChargeProgress = 0
+        end
     end
 end
 
@@ -1329,6 +1416,27 @@ function Lust:UpdatePlayer(player)
         --print("TimeMarkSameDirection: ", pData.TimeMarkSameDirection)
         --print("timeDiff: ", math.max(0.0, pData.TimeAttacking - pData.TimeMarkSameDirection))
         pData.IsKnockBacked = false
+
+        local headDirection = player:GetHeadDirection()
+
+        for _, roomEntity in pairs(Isaac.GetRoomEntities()) do
+            if roomEntity.Variant == EffectVariant.EVIL_EYE and roomEntity.SpawnerEntity then
+                local playerOwner = roomEntity.SpawnerEntity:ToPlayer()
+                if playerOwner and GetPtrHash(playerOwner) == GetPtrHash(player) then
+                    local lastAnimation = roomEntity:GetSprite():GetAnimation()
+                    if roomEntity:GetSprite():IsFinished(lastAnimation) then
+                        if lastAnimation == "ShootDown" then
+                            roomEntity:GetSprite():Play("IdleDown")
+                        elseif lastAnimation == "ShootSide" then
+                            roomEntity:GetSprite():Play("IdleSide")
+                        elseif lastAnimation == "ShootUp" then
+                            roomEntity:GetSprite():Play("IdleUp")
+                        end
+                    end
+                end
+            end
+        end 
+
         if pData.IsNewRoom then
             --print("ENABLING CROWN AGAIN!")
             pData.IsCrownDamaged = false
@@ -1348,6 +1456,7 @@ function Lust:OnDamage(entity, amount, flag, source, countdown)
         --print("PLAYER IS DAMAGED!")
         local pData = player:GetData()
         pData.IsCrownDamaged = true
+
     end
 end
 
@@ -1385,6 +1494,23 @@ function Lust:OnTearPreColl(entity, colEntity, low)
     end
 end
 
+function Lust:OnPlayerPreColl(player, colEntity, low)
+    if player:GetPlayerType() == playerType then
+        local pData = player:GetData()
+        if player:HasCollectible(CollectibleType.COLLECTIBLE_CURSED_EYE) then
+            if pData.ChargingValue > 0.0 and pData.ChargingValue < 1.0 and colEntity.CollisionDamage > 0.0 then
+                --player:GetSprite():Stop()
+                player:AnimateTeleport(true)
+                local level = game:GetLevel()
+                local roomIndex = level:GetRandomRoomIndex(false, rng:GetSeed())
+                game:StartRoomTransition(roomIndex, Direction.NO_DIRECTION, RoomTransitionAnim.TELEPORT)
+                --SFXManager():Play(SoundEffect.SOUND_HELL_PORTAL2)
+                return true
+            end
+        end
+    end
+end
+
 mod:AddPriorityCallback(ModCallbacks.MC_EVALUATE_CACHE, CallbackPriority.DEFAULT, function(_, player, cacheFlag)
     Lust:OnCache(player, cacheFlag)
 end)
@@ -1405,6 +1531,12 @@ mod:AddPriorityCallback(ModCallbacks.MC_POST_NEW_ROOM, CallbackPriority.DEFAULT,
 end)
 mod:AddPriorityCallback(ModCallbacks.MC_POST_EFFECT_UPDATE, CallbackPriority.DEFAULT, function(_, effect)
     Lust:UpdateEffect(effect)
+end)
+
+mod:AddPriorityCallback(ModCallbacks.MC_PRE_PLAYER_COLLISION, CallbackPriority.DEFAULT, function(_, player, colEntity, low)
+    if Lust:OnPlayerPreColl(player, colEntity, low) then
+        return true
+    end
 end)
 mod:AddPriorityCallback(ModCallbacks.MC_PRE_TEAR_COLLISION, CallbackPriority.DEFAULT, function(_, entity, colEntity, low)
     if Lust:OnTearPreColl(entity, colEntity, low) then

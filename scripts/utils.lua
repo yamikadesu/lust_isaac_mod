@@ -96,6 +96,19 @@ function utils.Choose(rng, ...)
 	return args[rng:RandomInt(#args) + 1]
 end
 
+function utils.ChooseRemove(rng, list)
+	local size = #list
+	if size == 0 then return nil end
+
+	local index = rng:RandomInt(size) + 1
+	local value = list[index]
+
+	list[index] = list[size]
+	list[size] = nil
+	
+	return value
+end
+
 -- Returns random number between two values (includes decimals if floats are present)
 function utils.RandomRange(rng, minimum, maximum)
 	if math.type(minimum + maximum) == "integer" then
@@ -364,7 +377,7 @@ function utils.CheckCrownOfLightStatus(player)
     -- Verificar si el jugador tiene el item Crown of Light
     if player:HasCollectible(CollectibleType.COLLECTIBLE_CROWN_OF_LIGHT) then
         -- Verificar si el jugador tiene salud completa
-        if player:GetHearts() == player:GetMaxHearts()
+        if player:GetHearts() == (player:GetMaxHearts() + 2*player:GetBoneHearts() )
 			and not pData.IsCrownDamaged then
 			if not pData.IsCrownActive then 
 				pData.IsRenderChanged = true
