@@ -1,6 +1,6 @@
 local mod = RegisterMod("Lust (YamikaDesu)", 1) 
 
-local version = "1.5"
+local version = "1.6"
 local debugString = mod.Name .. " V" .. version .. " loaded successfully"
 print(debugString)
 
@@ -48,7 +48,7 @@ local directionalRotationSpeed = 20
 local directionalDamageReduction = 5
 local directionalSpeed = 2
 
-local Lust = { -- Change Lorem everywhere to match your character. No spaces!
+local Lust = { 
     DAMAGE = 0, -- These are all relative to Isaac's Lust stats.
     SPEED = 0,
     SHOTSPEED = .5,
@@ -97,18 +97,22 @@ end
 function Lust:RemoveDataEffects(player, except)
     if player:GetPlayerType() == playerType then
         local pData = player:GetData()
-        if pData.brimstoneBall and pData.brimstoneBall ~= except then 
-            pData.brimstoneBall:Remove() 
-            pData.brimstoneBall = nil
+        if pData.Yami.BrimstoneBall and pData.Yami.BrimstoneBall ~= except then 
+            pData.Yami.BrimstoneBall:Remove() 
+            pData.Yami.BrimstoneBall = nil
         end
-        if pData.fireTechX and pData.fireTechX ~= except then 
-            pData.fireTechX:Remove() 
-            pData.fireTechX = nil
+        if pData.Yami.FireTechX and pData.Yami.FireTechX ~= except then 
+            pData.Yami.FireTechX:Remove() 
+            pData.Yami.FireTechX = nil
         end
-        --if pData.mawVoidLaser and pData.mawVoidLaser ~= except then 
-        --    pData.mawVoidLaser:Remove() 
-        --    pData.mawVoidLaser = nil
-        --end
+        if pData.Yami.TerraRockBall and pData.Yami.TerraRockBall ~= except then
+            pData.Yami.TerraRockBall:Remove() 
+            pData.Yami.TerraRockBall = nil
+        end
+        if pData.Yami.EvilEyeBall and pData.Yami.EvilEyeBall ~= except then
+            pData.Yami.EvilEyeBall:Remove() 
+            pData.Yami.EvilEyeBall = nil
+        end
     end
 end
 
@@ -118,42 +122,44 @@ function Lust:InitPlayer(player)
         --player:AddNullCostume(costume)
         rng:SetSeed(Game():GetSeeds():GetStartSeed(), RECOMMENDED_SHIFT_IDX)
         local pData = player:GetData()
-        pData.DefaultTearProbability = 0.05
-        pData.MaxTearProbability = 0.5
-        pData.MeleeAttackTriggered = false
-        pData.MeleeCooldown = 0
-        pData.ChargeProgress = 0
-        pData.ChargingValue = 0
-        pData.DoOnceChargingSound = true
-        pData.IsCrownActive = true
-        pData.IsRenderChanged = true
-        pData.PrevFlyingValue = Lust.FLYING
-        pData.HadDirectionalMovement = false
-        pData.IsInNewRoom = true
-        pData.MomKnifeItem = nil
-        pData.IsKnockBacked = false
-        pData.IsCrownDamaged = false
-        pData.CurrentEye = utils.Eyes.LEFT -- It will start with Right
-        pData.RNG = rng
-        pData.PrevAttackDirection = nil
-        pData.TotalAttacksNum = 0
-        pData.TimeMarkSameDirection = 0
-        pData.TimeAttacking = 0
-        pData.TimeWithoutAttacking = 0
-        pData.SuccesfulEnemyHit = 0
-        pData.UnsuccesfulEnemyHit = 0
-        pData.DeadToothRing = nil
-        pData.EyeGreedAttacks = 0
-        pData.IsDeadFirstCheck = true
-        pData.DrFetusBombDirectional = nil
-        pData.SpawnedFireDirectional = nil
-        pData.IsNewRoom = true
-        pData.FriendlyHalo = nil
-        pData.FriendlyDamageSpeed = 4.0
-        --pData.FriendlyDamageDelay = 4
-        pData.FriendlyDamageDelayTemp = 0
-        pData.MeleeLastFireDirection = Vector(0,0)
-        --pData.MawOfVoidReady = false
+        pData.Yami = {}
+        pData.Yami.DefaultTearProbability = 0.05
+        pData.Yami.MaxTearProbability = 0.5
+        pData.Yami.MeleeAttackTriggered = false
+        pData.Yami.MeleeCooldown = 0
+        pData.Yami.ChargeProgress = 0
+        pData.Yami.ChargingValue = 0
+        pData.Yami.DoOnceChargingSound = true
+        pData.Yami.IsCrownActive = true
+        pData.Yami.IsRenderChanged = true
+        pData.Yami.PrevFlyingValue = Lust.FLYING
+        pData.Yami.HadDirectionalMovement = false
+        pData.Yami.IsInNewRoom = true
+        pData.Yami.MomKnifeItem = nil
+        pData.Yami.IsKnockBacked = false
+        pData.Yami.IsCrownDamaged = false
+        pData.Yami.CurrentEye = utils.Eyes.LEFT -- It will start with Right
+        pData.Yami.RNG = rng
+        pData.Yami.Game = game
+        pData.Yami.PrevAttackDirection = nil
+        pData.Yami.TotalAttacksNum = 0
+        pData.Yami.TimeMarkSameDirection = 0
+        pData.Yami.TimeAttacking = 0
+        pData.Yami.TimeWithoutAttacking = 0
+        pData.Yami.SuccesfulEnemyHit = 0
+        pData.Yami.UnsuccesfulEnemyHit = 0
+        pData.Yami.DeadToothRing = nil
+        pData.Yami.EyeGreedAttacks = 0
+        pData.Yami.EvilEyeDirectionalDelay = 10
+        pData.Yami.EvilEyeDirectionalCount = 0
+        pData.Yami.IsDeadFirstCheck = true
+        pData.Yami.DrFetusBombDirectional = nil
+        pData.Yami.SpawnedFireDirectional = nil
+        pData.Yami.IsNewRoom = true
+        pData.Yami.FriendlyHalo = nil
+        pData.Yami.FriendlyDamageSpeed = 4.0
+        pData.Yami.FriendlyDamageDelayTemp = 0
+        pData.Yami.MeleeLastFireDirection = Vector(0,0)
         Lust:RemoveDataEffects(player)
     end
 end
@@ -165,7 +171,8 @@ function Lust:InitMelee(effect)
     elseif effect.Variant == weaponAttack then
         local hitboxData = effect:GetData()
         effect.EntityCollisionClass = EntityCollisionClass.ENTCOLL_NONE
-        hitboxData.EntityList = {}
+        if not hitboxData.Yami then hitboxData.Yami = {} end
+        hitboxData.Yami.EntityList = {}
     end
 end
 
@@ -174,64 +181,64 @@ function Lust:UpdateWeapon(player)
     local pData = player:GetData()
         
     if player:GetPlayerType() ~= playerType then
-        if pData.MeleeWeapon then
-            pData.MeleeWeapon:Remove()
-            pData.MeleeWeapon = nil
+        if pData.Yami.MeleeWeapon then
+            pData.Yami.MeleeWeapon:Remove()
+            pData.Yami.MeleeWeapon = nil
         end
     else
-        if not pData.MeleeWeapon then
-            pData.MeleeWeapon = Isaac.Spawn(EntityType.ENTITY_EFFECT, weapon, 0, player.Position, Vector.Zero, player):ToEffect()
-            pData.MeleeWeapon:AddEntityFlags(EntityFlag.FLAG_DONT_OVERWRITE | EntityFlag.FLAG_PERSISTENT)
-            pData.MeleeWeapon:FollowParent(player)
-            pData.MeleeWeapon.ParentOffset = Vector(0, meleeOffset)
-            --pData.MeleeWeapon:Update()
+        if not pData.Yami.MeleeWeapon then
+            pData.Yami.MeleeWeapon = Isaac.Spawn(EntityType.ENTITY_EFFECT, weapon, 0, player.Position, Vector.Zero, player):ToEffect()
+            pData.Yami.MeleeWeapon:AddEntityFlags(EntityFlag.FLAG_DONT_OVERWRITE | EntityFlag.FLAG_PERSISTENT)
+            pData.Yami.MeleeWeapon:FollowParent(player)
+            pData.Yami.MeleeWeapon.ParentOffset = Vector(0, meleeOffset)
+            --pData.Yami.MeleeWeapon:Update()
             
             for _, entity in pairs(Isaac.FindByType(EntityType.ENTITY_EFFECT, weapon)) do 
                 if entity:HasCommonParentWithEntity(player) then
-                    if GetPtrHash(entity) ~= GetPtrHash(pData.MeleeWeapon) then
+                    if GetPtrHash(entity) ~= GetPtrHash(pData.Yami.MeleeWeapon) then
                         entity:Remove()
                     end
                 end
             end
-        elseif pData.MeleeWeapon and not pData.MeleeWeapon:Exists() then
-            pData.MeleeWeapon:Remove()
-            pData.MeleeWeapon = nil
+        elseif pData.Yami.MeleeWeapon and not pData.Yami.MeleeWeapon:Exists() then
+            pData.Yami.MeleeWeapon:Remove()
+            pData.Yami.MeleeWeapon = nil
         end
         if player:HasCollectible(CollectibleType.COLLECTIBLE_MOMS_KNIFE) then
             local knifeDirection = utils.DirectionToVectorReversed[player:GetHeadDirection()]
-            if not pData.MomKnifeItem then
-                pData.MomKnifeItem = Isaac.Spawn(EntityType.ENTITY_KNIFE, 0, 0, player.Position, Vector.Zero, player):ToKnife()
-                pData.MomKnifeItem:AddEntityFlags(EntityFlag.FLAG_DONT_OVERWRITE | EntityFlag.FLAG_PERSISTENT)
-                --pData.MomKnifeItem:AddTearFlags(TearFlags.TEAR_PERSISTENT)
-                pData.MomKnifeItem.Parent = player
-                --pData.MomKnifeItem:SetDamageSource(EntityType.ENTITY_PLAYER)
-                pData.MomKnifeItem.CollisionDamage = player.Damage
-                pData.MomKnifeItem.Position = player.Position + Vector(0, meleeOffset)
-                --pData.MomKnifeItem:Update()
+            if not pData.Yami.MomKnifeItem then
+                pData.Yami.MomKnifeItem = Isaac.Spawn(EntityType.ENTITY_KNIFE, 0, 0, player.Position, Vector.Zero, player):ToKnife()
+                pData.Yami.MomKnifeItem:AddEntityFlags(EntityFlag.FLAG_DONT_OVERWRITE | EntityFlag.FLAG_PERSISTENT)
+                --pData.Yami.MomKnifeItem:AddTearFlags(TearFlags.TEAR_PERSISTENT)
+                pData.Yami.MomKnifeItem.Parent = player
+                --pData.Yami.MomKnifeItem:SetDamageSource(EntityType.ENTITY_PLAYER)
+                pData.Yami.MomKnifeItem.CollisionDamage = player.Damage
+                pData.Yami.MomKnifeItem.Position = player.Position + Vector(0, meleeOffset)
+                --pData.Yami.MomKnifeItem:Update()
             end
-            if pData.MomKnifeItem then
-                local meleeSprite = pData.MomKnifeItem:GetSprite()
-                pData.MomKnifeItem.Position = utils.Lerp(pData.MomKnifeItem.Position, player.Position + knifeDirection:Resized(meleeOffset), 0.4)
-                pData.MomKnifeItem.Rotation = utils.LerpAngle(utils.Round(pData.MomKnifeItem.Rotation, 3), knifeDirection:GetAngleDegrees(), 0.4)
+            if pData.Yami.MomKnifeItem then
+                local meleeSprite = pData.Yami.MomKnifeItem:GetSprite()
+                pData.Yami.MomKnifeItem.Position = utils.Lerp(pData.Yami.MomKnifeItem.Position, player.Position + knifeDirection:Resized(meleeOffset), 0.4)
+                pData.Yami.MomKnifeItem.Rotation = utils.LerpAngle(utils.Round(pData.Yami.MomKnifeItem.Rotation, 3), knifeDirection:GetAngleDegrees(), 0.4)
                 --print(knifeDirection:GetAngleDegrees())
-                --pData.MomKnifeItem.Position = player.Position + knifeDirection:Resized(meleeOffset)
-                --pData.MomKnifeItem.SpriteRotation = knifeDirection:GetAngleDegrees()
-                --pData.MomKnifeItem.SpriteOffset = knifeDirection:Resized(meleeOffset)
-                pData.MomKnifeItem.SpriteScale = utils.GetMeleeSize(player) * Vector.One
-                pData.MomKnifeItem:SetSize(utils.GetMeleeSize(player) * meleeSize, pData.MomKnifeItem.SizeMulti, 0)
+                --pData.Yami.MomKnifeItem.Position = player.Position + knifeDirection:Resized(meleeOffset)
+                --pData.Yami.MomKnifeItem.SpriteRotation = knifeDirection:GetAngleDegrees()
+                --pData.Yami.MomKnifeItem.SpriteOffset = knifeDirection:Resized(meleeOffset)
+                pData.Yami.MomKnifeItem.SpriteScale = utils.GetMeleeSize(player) * Vector.One
+                pData.Yami.MomKnifeItem:SetSize(utils.GetMeleeSize(player) * meleeSize, pData.Yami.MomKnifeItem.SizeMulti, 0)
                 meleeSprite:LoadGraphics()
             end
         else
-            if pData.MomKnifeItem then
-                pData.MomKnifeItem:Remove()
-                pData.MomKnifeItem = nil
+            if pData.Yami.MomKnifeItem then
+                pData.Yami.MomKnifeItem:Remove()
+                pData.Yami.MomKnifeItem = nil
             end
         end
     
-        if pData.MeleeWeapon and pData.MeleeWeapon:Exists() then
-            local melee = pData.MeleeWeapon
+        if pData.Yami.MeleeWeapon and pData.Yami.MeleeWeapon:Exists() then
+            local melee = pData.Yami.MeleeWeapon
             local meleeSprite = melee:GetSprite()
-            local meleeHitbox = pData.MeleeHitbox
+            local meleeHitbox = pData.Yami.MeleeHitbox
             local meleeDirection = (meleeHitbox and meleeHitbox:Exists()) 
                                 and (meleeHitbox.Position - player.Position) 
                                 or utils.DirectionToVector[player:GetHeadDirection()] 
@@ -240,7 +247,7 @@ function Lust:UpdateWeapon(player)
                 if markedTargetPos then
                     melee.Position = markedTargetPos
                 else 
-                    if not pData.HadDirectionalMovement or pData.IsNewRoom then
+                    if not pData.Yami.HadDirectionalMovement or pData.Yami.IsNewRoom then
                         melee.Position = player.Position
                     else
                         melee.Position = melee.Position + player:GetAimDirection():Resized(utils.GetShotSpeed(player)*directionalSpeed)
@@ -256,7 +263,7 @@ function Lust:UpdateWeapon(player)
                 melee.SpriteScale = utils.GetMeleeSize(player) * Vector.One
                 melee:SetSize(utils.GetMeleeSize(player) * meleeSize, melee.SizeMulti, 0)
             else
-                if pData.HadDirectionalMovement then
+                if pData.Yami.HadDirectionalMovement then
                     melee.IsFollowing = true
                 end
                 if player:IsExtraAnimationFinished() then
@@ -272,7 +279,7 @@ function Lust:UpdateWeapon(player)
                 meleeSprite:ReplaceSpritesheet(2, emptyPng)
                 meleeSprite:LoadGraphics()
             end
-            pData.HadDirectionalMovement = utils.IsDirectionalShooting(player)
+            pData.Yami.HadDirectionalMovement = utils.IsDirectionalShooting(player)
         end
     end
 
@@ -312,11 +319,11 @@ function Lust:UpdateEffect(effect)
                     if effect.Timeout <= 0 then effect:Remove() end
                 end
             elseif effect.Variant == friendlyHalo then
-                if pData.FriendlyDamageDelayTemp >= (player.MaxFireDelay + 1.0) / 2.0 then
-                    pData.FriendlyDamageDelayTemp = 0
+                if pData.Yami.FriendlyDamageDelayTemp >= (player.MaxFireDelay + 1.0) / 2.0 then
+                    pData.Yami.FriendlyDamageDelayTemp = 0
                     utils.CharmNearEnemies(effect, effect.Position, effect.Size)
                 else
-                    pData.FriendlyDamageDelayTemp = pData.FriendlyDamageDelayTemp + 1
+                    pData.Yami.FriendlyDamageDelayTemp = pData.Yami.FriendlyDamageDelayTemp + 1
                 end
             end
         end
@@ -328,8 +335,8 @@ function Lust:OnHit(entity, amount, flag, source, countdown)
     if source.Type == EntityType.ENTITY_EFFECT and source.Variant == weaponAttack then
         local hitbox = source.Entity:ToEffect()
         local hitboxData = hitbox:GetData()
-        
-        if not hitboxData.EntityList or utils.IsValueInList(hitboxData.EntityList, entity.InitSeed) then return false end
+        if not hitboxData.Yami then hitboxData.Yami = {} end
+        if not hitboxData.Yami.EntityList or utils.IsValueInList(hitboxData.Yami.EntityList, entity.InitSeed) then return false end
         
         if hitbox.Parent and hitbox.Parent:ToPlayer() then
             local player = hitbox.Parent:ToPlayer()
@@ -338,16 +345,16 @@ function Lust:OnHit(entity, amount, flag, source, countdown)
 
                 local pData = player:GetData()
 
-                if not pData.IsKnockBacked then 
+                if not pData.Yami.IsKnockBacked then 
                     utils.ApplyKnockback(entity, player, meleeKnockbackSelf)
                     utils.ApplyKnockback(player, entity, meleeKnockback)
-                    pData.IsKnockBacked = true
+                    pData.Yami.IsKnockBacked = true
                 end
                 SFXManager():Play(SoundEffect.SOUND_WHIP_HIT)
             end
         end
         
-        table.insert(hitboxData.EntityList, entity.InitSeed) -- Would be better idea to do that for pickups aswell, so they don't get pushed around so much
+        table.insert(hitboxData.Yami.EntityList, entity.InitSeed) -- Would be better idea to do that for pickups aswell, so they don't get pushed around so much
     end
 end
 
@@ -413,13 +420,14 @@ function Lust:PostUpdateMelee(player, lastFireDirection, effectPosAlt)
                 if bothItems and utils.RandomRange(rng, 0, 1) < 0.5 then
                     -- 50% de probabilidad de alternar entre azul y rojo cuando tiene ambos ítems
                     if utils.IsDirectionalShooting(player) then
-                        if not pData.SpawnedFireDirectional then
+                        if not pData.Yami.SpawnedFireDirectional then
                             --print("SPAWNED RED FIRE!") 
-                            pData.SpawnedFireDirectional = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.RED_CANDLE_FLAME, 0, effectPos, Vector.Zero, player):ToEffect()
-                            pData.SpawnedFireDirectional.CollisionDamage = player.Damage * 3.0
-                            pData.SpawnedFireDirectional:SetTimeout(60)
-                            pData.SpawnedFireDirectional:GetData().IgnoreCollisionWithVariant = {weaponAttack, weapon}
-                            pData.SpawnedFireDirectional:GetData().IgnoreCollisionWithTime = 5.0
+                            pData.Yami.SpawnedFireDirectional = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.RED_CANDLE_FLAME, 0, effectPos, Vector.Zero, player):ToEffect()
+                            pData.Yami.SpawnedFireDirectional.CollisionDamage = player.Damage * 3.0
+                            pData.Yami.SpawnedFireDirectional:SetTimeout(60)
+                            if not pData.Yami.SpawnedFireDirectional:GetData().Yami then pData.Yami.SpawnedFireDirectional:GetData().Yami = {} end
+                            pData.Yami.SpawnedFireDirectional:GetData().Yami.IgnoreCollisionWithVariant = {weaponAttack, weapon}
+                            pData.Yami.SpawnedFireDirectional:GetData().Yami.IgnoreCollisionWithTime = 5.0
                         end
                     else
                         --print("SPAWNED RED FIRE!") 
@@ -427,18 +435,20 @@ function Lust:PostUpdateMelee(player, lastFireDirection, effectPosAlt)
                         local redFlame = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.RED_CANDLE_FLAME, 0, effectPos, redFlameVel, player):ToEffect()
                         redFlame.CollisionDamage = player.Damage * 3.0
                         redFlame:SetTimeout(60)
-                        redFlame:GetData().IgnoreCollisionWithVariant = {weaponAttack, weapon}
-                        redFlame:GetData().IgnoreCollisionWithTime = 5.0
+                        if not redFlame:GetData().Yami then redFlame:GetData().Yami = {} end
+                        redFlame:GetData().Yami.IgnoreCollisionWithVariant = {weaponAttack, weapon}
+                        redFlame:GetData().Yami.IgnoreCollisionWithTime = 5.0
                     end
                 else
                     if utils.IsDirectionalShooting(player) then
-                        if not pData.SpawnedFireDirectional then
+                        if not pData.Yami.SpawnedFireDirectional then
                             --print("SPAWNED BLUE FIRE!") 
-                            pData.SpawnedFireDirectional = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.BLUE_FLAME, 0, effectPos, Vector.Zero, player):ToEffect()
-                            pData.SpawnedFireDirectional.CollisionDamage = player.Damage * 3.0
-                            pData.SpawnedFireDirectional:SetTimeout(60)
-                            pData.SpawnedFireDirectional:GetData().IgnoreCollisionWithVariant = {weaponAttack, weapon}
-                            pData.SpawnedFireDirectional:GetData().IgnoreCollisionWithTime = 5.0
+                            pData.Yami.SpawnedFireDirectional = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.BLUE_FLAME, 0, effectPos, Vector.Zero, player):ToEffect()
+                            pData.Yami.SpawnedFireDirectional.CollisionDamage = player.Damage * 3.0
+                            pData.Yami.SpawnedFireDirectional:SetTimeout(60)
+                            if not pData.Yami.SpawnedFireDirectional:GetData().Yami then pData.Yami.SpawnedFireDirectional:GetData().Yami = {} end
+                            pData.Yami.SpawnedFireDirectional:GetData().Yami.IgnoreCollisionWithVariant = {weaponAttack, weapon}
+                            pData.Yami.SpawnedFireDirectional:GetData().Yami.IgnoreCollisionWithTime = 5.0
                         end
                     else
                         --print("SPAWNED BLUE FIRE!")
@@ -446,18 +456,19 @@ function Lust:PostUpdateMelee(player, lastFireDirection, effectPosAlt)
                         local blueFlame = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.BLUE_FLAME, 0, effectPos, blueFlameVel, player):ToEffect()
                         blueFlame.CollisionDamage = player.Damage * 3.0
                         blueFlame:SetTimeout(60)
-                        blueFlame:GetData().IgnoreCollisionWithVariant = {weaponAttack, weapon}
-                        blueFlame:GetData().IgnoreCollisionWithTime = 5.0
+                        if not blueFlame:GetData().Yami then blueFlame:GetData().Yami = {} end
+                        blueFlame:GetData().Yami.IgnoreCollisionWithVariant = {weaponAttack, weapon}
+                        blueFlame:GetData().Yami.IgnoreCollisionWithTime = 5.0
                     end
                 end
                 hasLaunchedFire = true
             end
-            if pData.SpawnedFireDirectional then
-                pData.SpawnedFireDirectional.Position = effectPosAlt
-                pData.SpawnedFireDirectional.Velocity = Vector.Zero
-                if pData.SpawnedFireDirectional:IsDead() then
-                    pData.SpawnedFireDirectional:Remove()
-                    pData.SpawnedFireDirectional = nil
+            if pData.Yami.SpawnedFireDirectional then
+                pData.Yami.SpawnedFireDirectional.Position = effectPosAlt
+                pData.Yami.SpawnedFireDirectional.Velocity = Vector.Zero
+                if pData.Yami.SpawnedFireDirectional:IsDead() then
+                    pData.Yami.SpawnedFireDirectional:Remove()
+                    pData.Yami.SpawnedFireDirectional = nil
                 end
             end
         end
@@ -465,13 +476,14 @@ function Lust:PostUpdateMelee(player, lastFireDirection, effectPosAlt)
             local rand = utils.RandomRange(rng, 0.0, 1.0)
             if rand <= prob then
                 if utils.IsDirectionalShooting(player) then
-                    if not pData.SpawnedFireDirectional then
+                    if not pData.Yami.SpawnedFireDirectional then
                         --print("SPAWNED RED FIRE!")
-                        pData.SpawnedFireDirectional = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.RED_CANDLE_FLAME, 0, effectPos, Vector.Zero, player):ToEffect()
-                        pData.SpawnedFireDirectional.CollisionDamage = player.Damage * 3.0
-                        pData.SpawnedFireDirectional:SetTimeout(60)
-                        pData.SpawnedFireDirectional:GetData().IgnoreCollisionWithVariant = {weaponAttack, weapon}
-                        pData.SpawnedFireDirectional:GetData().IgnoreCollisionWithTime = 5.0
+                        pData.Yami.SpawnedFireDirectional = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.RED_CANDLE_FLAME, 0, effectPos, Vector.Zero, player):ToEffect()
+                        pData.Yami.SpawnedFireDirectional.CollisionDamage = player.Damage * 3.0
+                        pData.Yami.SpawnedFireDirectional:SetTimeout(60)
+                        if not pData.Yami.SpawnedFireDirectional:GetData().Yami then pData.Yami.SpawnedFireDirectional:GetData().Yami = {} end
+                        pData.Yami.SpawnedFireDirectional:GetData().Yami.IgnoreCollisionWithVariant = {weaponAttack, weapon}
+                        pData.Yami.SpawnedFireDirectional:GetData().Yami.IgnoreCollisionWithTime = 5.0
                     end
                 else
                     --print("SPAWNED RED FIRE!")
@@ -479,17 +491,18 @@ function Lust:PostUpdateMelee(player, lastFireDirection, effectPosAlt)
                     local redFlame = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.RED_CANDLE_FLAME, 0, effectPos, redFlameVel, player):ToEffect()
                     redFlame.CollisionDamage = player.Damage * 3.0
                     redFlame:SetTimeout(60)
-                    redFlame:GetData().IgnoreCollisionWithVariant = {weaponAttack, weapon}
-                    redFlame:GetData().IgnoreCollisionWithTime = 5.0
+                    if not redFlame:GetData().Yami then redFlame:GetData().Yami = {} end
+                    redFlame:GetData().Yami.IgnoreCollisionWithVariant = {weaponAttack, weapon}
+                    redFlame:GetData().Yami.IgnoreCollisionWithTime = 5.0
                 end
                 hasLaunchedFire = true
             end
-            if pData.SpawnedFireDirectional then
-                pData.SpawnedFireDirectional.Position = effectPosAlt
-                pData.SpawnedFireDirectional.Velocity = Vector.Zero
-                if pData.SpawnedFireDirectional:IsDead() then
-                    pData.SpawnedFireDirectional:Remove()
-                    pData.SpawnedFireDirectional = nil
+            if pData.Yami.SpawnedFireDirectional then
+                pData.Yami.SpawnedFireDirectional.Position = effectPosAlt
+                pData.Yami.SpawnedFireDirectional.Velocity = Vector.Zero
+                if pData.Yami.SpawnedFireDirectional:IsDead() then
+                    pData.Yami.SpawnedFireDirectional:Remove()
+                    pData.Yami.SpawnedFireDirectional = nil
                 end
             end
         end
@@ -502,16 +515,16 @@ function Lust:PostUpdateMelee(player, lastFireDirection, effectPosAlt)
             end
         end
         if player:HasCollectible(CollectibleType.COLLECTIBLE_BIRTHRIGHT) then
-            if pData.FriendlyHalo then
+            if pData.Yami.FriendlyHalo then
                 if utils.IsDirectionalShooting(player) then
-                    pData.FriendlyHalo.Position = effectPosAlt
+                    pData.Yami.FriendlyHalo.Position = effectPosAlt
                 end
             end
         end
         if utils.HasTearFlag(tearParams, TearFlags.TEAR_FETUS) 
             or utils.IsUsingWeapon(player, WeaponType.WEAPON_FETUS) then
             --print("SHOT TEAR FETUS!")
-            --if pData.IsFullCharge then
+            --if pData.Yami.IsFullCharge then
             local tearVel = lastFireDirection:Resized(utils.GetShotSpeed(player))
             local tearSpawned = Isaac.Spawn(EntityType.ENTITY_TEAR, TearVariant.FETUS, 0, effectPos, tearVel, player):ToTear()
             utils.SetAllTearFlag(player, tearSpawned, tearParams)
@@ -545,17 +558,17 @@ function Lust:PostUpdateMelee(player, lastFireDirection, effectPosAlt)
             if utils.IsDirectionalShooting(player) then
                 --local probTear = 0.02 
                 --local rand = utils.RandomRange(rng, 0.0, 1.0)
-                if pData.EyeGreedAttacks >= 199 then
+                if pData.Yami.EyeGreedAttacks >= 199 then
                     local tearVel = lastFireDirection:Resized(utils.GetShotSpeed(player))
                     local tearSpawned = Isaac.Spawn(EntityType.ENTITY_TEAR, TearVariant.COIN, 0, effectPosTear, tearVel, player):ToTear()
                     tearSpawned:AddTearFlags(TearFlags.TEAR_MIDAS | TearFlags.TEAR_GREED_COIN)  
                     tearSpawned.CollisionDamage = player.Damage
-                    pData.EyeGreedAttacks = 0
+                    pData.Yami.EyeGreedAttacks = 0
                 else
-                    pData.EyeGreedAttacks = pData.EyeGreedAttacks + 1
+                    pData.Yami.EyeGreedAttacks = pData.Yami.EyeGreedAttacks + 1
                 end
             else
-                if pData.EyeGreedAttacks >= 19 then
+                if pData.Yami.EyeGreedAttacks >= 19 then
                     if player:GetNumCoins() > 0 then
                         player:AddCoins(-1)
                     end
@@ -564,9 +577,9 @@ function Lust:PostUpdateMelee(player, lastFireDirection, effectPosAlt)
                     tearSpawned:AddTearFlags(TearFlags.TEAR_MIDAS | TearFlags.TEAR_GREED_COIN)  
                     tearSpawned.CollisionDamage = player.Damage
                     --tearSpawned:SetTimeout(30)
-                    pData.EyeGreedAttacks = 0
+                    pData.Yami.EyeGreedAttacks = 0
                 else
-                    pData.EyeGreedAttacks = pData.EyeGreedAttacks + 1
+                    pData.Yami.EyeGreedAttacks = pData.Yami.EyeGreedAttacks + 1
                 end
             end
         end
@@ -604,30 +617,54 @@ function Lust:PostUpdateMelee(player, lastFireDirection, effectPosAlt)
         end
         if player:HasCollectible(CollectibleType.COLLECTIBLE_EVIL_EYE) then
             if utils.IsDirectionalShooting(player) then
-                if not pData.evilEyeBall then
-                    pData.evilEyeBall = Isaac.Spawn(EntityType.ENTITY_EFFECT, TearVariant.ROCK, 0, effectPosAlt, Vector.Zero, player):ToEffect()
-                    pData.evilEyeBall:AddEntityFlags(EntityFlag.FLAG_DONT_OVERWRITE | EntityFlag.FLAG_PERSISTENT)
+                if not pData.Yami.EvilEyeBall then
+                    pData.Yami.EvilEyeBall = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.EVIL_EYE, 0, effectPosAlt, Vector.Zero, player):ToEffect()
+                    pData.Yami.EvilEyeBall:AddEntityFlags(EntityFlag.FLAG_DONT_OVERWRITE | EntityFlag.FLAG_PERSISTENT)
                 end
-                pData.evilEyeBall.Position = effectPosAlt
-                pData.evilEyeBall:GetSprite():Stop()
-                if headDirection == Direction.LEFT then
-                    pData.evilEyeBall:GetSprite():Play("ShootSide", true)
-                    pData.evilEyeBall:GetSprite().FlipX = true
-                elseif headDirection == Direction.UP then
-                    pData.evilEyeBall:GetSprite():Play("ShootUp", true)
-                    pData.evilEyeBall:GetSprite().FlipX = false
-                elseif headDirection == Direction.RIGHT then
-                    pData.evilEyeBall:GetSprite():Play("ShootSide", true)
-                    pData.evilEyeBall:GetSprite().FlipX = false
-                elseif headDirection == Direction.DOWN then
-                    pData.evilEyeBall:GetSprite():Play("ShootDown", true)
-                    pData.evilEyeBall:GetSprite().FlipX = false
+                --pData.Yami.EvilEyeBall.Velocity = (effectPosAlt - pData.Yami.EvilEyeBall.Position):Resized(5.0)
+                pData.Yami.EvilEyeBall.Position = effectPosAlt
+                if pData.Yami.EvilEyeDirectionalCount >= pData.Yami.EvilEyeDirectionalDelay then
+                    pData.Yami.EvilEyeBall:GetSprite():Stop()
+                    if headDirection == Direction.LEFT then
+                        pData.Yami.EvilEyeBall:GetSprite():Play("ShootSide", true)
+                        pData.Yami.EvilEyeBall:GetSprite().FlipX = true
+                    elseif headDirection == Direction.UP then
+                        pData.Yami.EvilEyeBall:GetSprite():Play("ShootUp", true)
+                        pData.Yami.EvilEyeBall:GetSprite().FlipX = false
+                    elseif headDirection == Direction.RIGHT then
+                        pData.Yami.EvilEyeBall:GetSprite():Play("ShootSide", true)
+                        pData.Yami.EvilEyeBall:GetSprite().FlipX = false
+                    elseif headDirection == Direction.DOWN then
+                        pData.Yami.EvilEyeBall:GetSprite():Play("ShootDown", true)
+                        pData.Yami.EvilEyeBall:GetSprite().FlipX = false
+                    end
+                    local tearVel = utils.DirectionToVector[headDirection]:Resized(utils.GetShotSpeed(player, 1.0)*10.0)
+                    player:FireTear(pData.Yami.EvilEyeBall.Position, tearVel, false, false, false, player)
+                    pData.Yami.EvilEyeDirectionalCount = 0
+                else
+                    if headDirection == Direction.LEFT then
+                        pData.Yami.EvilEyeBall:GetSprite():Play("IdleSide", true)
+                        pData.Yami.EvilEyeBall:GetSprite().FlipX = true
+                    elseif headDirection == Direction.UP then
+                        pData.Yami.EvilEyeBall:GetSprite():Play("IdleUp", true)
+                        pData.Yami.EvilEyeBall:GetSprite().FlipX = false
+                    elseif headDirection == Direction.RIGHT then
+                        pData.Yami.EvilEyeBall:GetSprite():Play("IdleSide", true)
+                        pData.Yami.EvilEyeBall:GetSprite().FlipX = false
+                    elseif headDirection == Direction.DOWN then
+                        pData.Yami.EvilEyeBall:GetSprite():Play("IdleDown", true)
+                        pData.Yami.EvilEyeBall:GetSprite().FlipX = false
+                    end
+                    local fireDelay = player.MaxFireDelay  -- Evitar divisiones entre 0
+                    if fireDelay == 0 then 
+                        fireDelay = 0.1
+                    end
+                    local increment = math.max(0.25, math.min(pData.Yami.EvilEyeDirectionalDelay, 1.0 / fireDelay))
+                    pData.Yami.EvilEyeDirectionalCount = pData.Yami.EvilEyeDirectionalCount + increment
                 end
-                local tearVel = utils.DirectionToVector[headDirection]:Resized(utils.GetShotSpeed(player, 1.0)*10.0)
-                player:FireTear(pData.evilEyeBall.Position, tearVel)
-                if pData.evilEyeBall and pData.evilEyeBall:IsDead() then
-                    pData.evilEyeBall:Remove() 
-                    pData.evilEyeBall = nil
+                if pData.Yami.EvilEyeBall and pData.Yami.EvilEyeBall:IsDead() then
+                    pData.Yami.EvilEyeBall:Remove() 
+                    pData.Yami.EvilEyeBall = nil
                 end
             else
                 local probLight = utils.RandomLuck(player.Luck, 0.0333, 0.10, 20.0)
@@ -636,7 +673,7 @@ function Lust:PostUpdateMelee(player, lastFireDirection, effectPosAlt)
                     local tearVel = lastFireDirection:Resized(utils.GetShotSpeed(player, 1.0)*3.0)
                     local lightSpawned = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.EVIL_EYE, 0, effectPosTear, tearVel, player):ToEffect()
                 end
-                for _, roomEntity in pairs(Isaac.GetRoomEntities()) do
+                for _, roomEntity in pairs(Isaac.FindByType(EntityType.ENTITY_EFFECT, EffectVariant.EVIL_EYE)) do
                     if roomEntity.Variant == EffectVariant.EVIL_EYE and roomEntity.SpawnerEntity then
                         local playerOwner = roomEntity.SpawnerEntity:ToPlayer()
                         if playerOwner and GetPtrHash(playerOwner) == GetPtrHash(player) then
@@ -655,7 +692,7 @@ function Lust:PostUpdateMelee(player, lastFireDirection, effectPosAlt)
                                 roomEntity:GetSprite().FlipX = false
                             end
                             local tearVel = utils.DirectionToVector[headDirection]:Resized(utils.GetShotSpeed(player, 1.0)*10.0)
-                            player:FireTear(roomEntity.Position, tearVel)
+                            player:FireTear(roomEntity.Position, tearVel, false, false, false, player)
                         end
                     end
                 end 
@@ -663,20 +700,20 @@ function Lust:PostUpdateMelee(player, lastFireDirection, effectPosAlt)
         end
         if player:HasCollectible(CollectibleType.COLLECTIBLE_TERRA) then
             if utils.IsDirectionalShooting(player) then
-                if not pData.terraRockBall then
-                    pData.terraRockBall = Isaac.Spawn(EntityType.ENTITY_TEAR, TearVariant.ROCK, 0, effectPosAlt, Vector.Zero, player):ToTear()
-                    pData.terraRockBall:AddEntityFlags(EntityFlag.FLAG_DONT_OVERWRITE | EntityFlag.FLAG_PERSISTENT)
-                    pData.terraRockBall:AddTearFlags(TearFlags.TEAR_ROCK)  
-                    --pData.terraRockBall:FollowParent(player)
-                    --pData.terraRockBall.IsFollowing = false
+                if not pData.Yami.TerraRockBall then
+                    pData.Yami.TerraRockBall = Isaac.Spawn(EntityType.ENTITY_TEAR, TearVariant.ROCK, 0, effectPosAlt, Vector.Zero, player):ToTear()
+                    pData.Yami.TerraRockBall:AddEntityFlags(EntityFlag.FLAG_DONT_OVERWRITE | EntityFlag.FLAG_PERSISTENT)
+                    pData.Yami.TerraRockBall:AddTearFlags(TearFlags.TEAR_ROCK | TearFlags.TEAR_PIERCING | TearFlags.TEAR_SPECTRAL)  
+                    --pData.Yami.TerraRockBall:FollowParent(player)
+                    --pData.Yami.TerraRockBall.IsFollowing = false
                 end
-                --Lust:RemoveDataEffects(player, pData.brimstoneBall)
-                pData.terraRockBall.Position = effectPosAlt
-                --utils.SetAllTearFlag(player, pData.brimstoneBall, tearParams)
-                pData.terraRockBall.CollisionDamage = player.Damage / directionalDamageReduction
-                if pData.terraRockBall and pData.terraRockBall:IsDead() then
-                    pData.terraRockBall:Remove() 
-                    pData.terraRockBall = nil
+                --Lust:RemoveDataEffects(player, pData.Yami.BrimstoneBall)
+                pData.Yami.TerraRockBall.Position = effectPosAlt
+                --utils.SetAllTearFlag(player, pData.Yami.BrimstoneBall, tearParams)
+                pData.Yami.TerraRockBall.CollisionDamage = player.Damage / directionalDamageReduction
+                if pData.Yami.TerraRockBall and pData.Yami.TerraRockBall:IsDead() then
+                    pData.Yami.TerraRockBall:Remove() 
+                    pData.Yami.TerraRockBall = nil
                 end
             else
                 local tearVel = lastFireDirection:Resized(utils.GetShotSpeed(player))
@@ -689,18 +726,18 @@ function Lust:PostUpdateMelee(player, lastFireDirection, effectPosAlt)
             and not (utils.IsUsingWeapon(player, WeaponType.WEAPON_TECH_X)
                     or utils.IsUsingWeapon(player, WeaponType.WEAPON_LASER)) then
             if utils.IsDirectionalShooting(player) then
-                if not pData.brimstoneBall then
-                    pData.brimstoneBall = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.BRIMSTONE_BALL, 0, effectPosAlt, Vector.Zero, player):ToEffect()
-                    pData.brimstoneBall:AddEntityFlags(EntityFlag.FLAG_DONT_OVERWRITE | EntityFlag.FLAG_PERSISTENT)
-                    pData.brimstoneBall:FollowParent(player)
-                    pData.brimstoneBall.IsFollowing = false
+                if not pData.Yami.BrimstoneBall then
+                    pData.Yami.BrimstoneBall = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.BRIMSTONE_BALL, 0, effectPosAlt, Vector.Zero, player):ToEffect()
+                    pData.Yami.BrimstoneBall:AddEntityFlags(EntityFlag.FLAG_DONT_OVERWRITE | EntityFlag.FLAG_PERSISTENT)
+                    pData.Yami.BrimstoneBall:FollowParent(player)
+                    pData.Yami.BrimstoneBall.IsFollowing = false
                 end
-                --Lust:RemoveDataEffects(player, pData.brimstoneBall)
-                pData.brimstoneBall.Position = effectPosAlt
-                --utils.SetAllTearFlag(player, pData.brimstoneBall, tearParams)
-                pData.brimstoneBall.CollisionDamage = player.Damage / directionalDamageReduction
+                --Lust:RemoveDataEffects(player, pData.Yami.BrimstoneBall)
+                pData.Yami.BrimstoneBall.Position = effectPosAlt
+                --utils.SetAllTearFlag(player, pData.Yami.BrimstoneBall, tearParams)
+                pData.Yami.BrimstoneBall.CollisionDamage = player.Damage / directionalDamageReduction
             else
-                if pData.IsFullCharge then
+                if pData.Yami.IsFullCharge then
                     local tearW = player:FireBrimstone(lastFireDirection, player, player.Damage):ToLaser()
                     utils.SetAllTearFlag(player, tearW, tearParams)
                 else
@@ -716,19 +753,19 @@ function Lust:PostUpdateMelee(player, lastFireDirection, effectPosAlt)
         if utils.IsUsingWeapon(player, WeaponType.WEAPON_TECH_X) 
             or utils.IsUsingWeapon(player, WeaponType.WEAPON_LASER) then
             if utils.IsDirectionalShooting(player) then
-                if pData.brimstoneBall then
-                    pData.brimstoneBall:Remove() 
-                    pData.brimstoneBall = nil
+                if pData.Yami.BrimstoneBall then
+                    pData.Yami.BrimstoneBall:Remove() 
+                    pData.Yami.BrimstoneBall = nil
                 end
-                if not pData.fireTechX then
-                    pData.fireTechX = player:FireTechXLaser(effectPosAlt, Vector.Zero, meleeLaserSize, player, player.Damage / directionalDamageReduction):ToLaser()
-                    pData.fireTechX:AddEntityFlags(EntityFlag.FLAG_DONT_OVERWRITE | EntityFlag.FLAG_PERSISTENT)
+                if not pData.Yami.FireTechX then
+                    pData.Yami.FireTechX = player:FireTechXLaser(effectPosAlt, Vector.Zero, meleeLaserSize, player, player.Damage / directionalDamageReduction):ToLaser()
+                    pData.Yami.FireTechX:AddEntityFlags(EntityFlag.FLAG_DONT_OVERWRITE | EntityFlag.FLAG_PERSISTENT)
                 end
-                --Lust:RemoveDataEffects(player, pData.fireTechX)
-                pData.fireTechX.Position = effectPosAlt
-                utils.SetAllTearFlag(player, pData.fireTechX, tearParams)
+                --Lust:RemoveDataEffects(player, pData.Yami.FireTechX)
+                pData.Yami.FireTechX.Position = effectPosAlt
+                utils.SetAllTearFlag(player, pData.Yami.FireTechX, tearParams)
             else 
-                if pData.IsFullCharge then
+                if pData.Yami.IsFullCharge then
                     local tearW = player:FireTechLaser(effectPos, LaserOffset.LASER_TECH1_OFFSET, lastFireDirection, false, false, player, player.Damage):ToLaser()
                     if utils.IsUsingWeapon(player, WeaponType.WEAPON_BRIMSTONE) then
                         --print("BRIM TECH WITH WEAPON TECH X!")
@@ -748,19 +785,19 @@ function Lust:PostUpdateMelee(player, lastFireDirection, effectPosAlt)
         if utils.IsUsingWeapon(player, WeaponType.WEAPON_BOMBS) 
             or utils.IsUsingWeapon(player, WeaponType.WEAPON_ROCKETS)  then
             if utils.IsDirectionalShooting(player) then
-                if not pData.DrFetusBombDirectional then
-                    pData.DrFetusBombDirectional = player:FireBomb(effectPosAlt, Vector.Zero, player)
-                    --pData.DrFetusBombDirectional:AddVelocity(Vector(-pData.DrFetusBombDirectional.Velocity.X, -pData.DrFetusBombDirectional.Velocity.Y))
+                if not pData.Yami.DrFetusBombDirectional then
+                    pData.Yami.DrFetusBombDirectional = player:FireBomb(effectPosAlt, Vector.Zero, player)
+                    --pData.Yami.DrFetusBombDirectional:AddVelocity(Vector(-pData.Yami.DrFetusBombDirectional.Velocity.X, -pData.Yami.DrFetusBombDirectional.Velocity.Y))
                     if utils.IsUsingWeapon(player, WeaponType.WEAPON_BRIMSTONE) then
-                        pData.DrFetusBombDirectional:AddTearFlags(TearFlags.TEAR_BRIMSTONE_BOMB)
+                        pData.Yami.DrFetusBombDirectional:AddTearFlags(TearFlags.TEAR_BRIMSTONE_BOMB)
                     end
                 end
-                if pData.DrFetusBombDirectional then
-                    pData.DrFetusBombDirectional.Position = effectPosAlt
-                    pData.DrFetusBombDirectional.Velocity = Vector.Zero
-                    if pData.DrFetusBombDirectional:IsDead() then
-                        pData.DrFetusBombDirectional:Remove()
-                        pData.DrFetusBombDirectional = nil
+                if pData.Yami.DrFetusBombDirectional then
+                    pData.Yami.DrFetusBombDirectional.Position = effectPosAlt
+                    pData.Yami.DrFetusBombDirectional.Velocity = Vector.Zero
+                    if pData.Yami.DrFetusBombDirectional:IsDead() then
+                        pData.Yami.DrFetusBombDirectional:Remove()
+                        pData.Yami.DrFetusBombDirectional = nil
                     end
                 end
             else
@@ -786,18 +823,18 @@ function Lust:UpdateMelee(player)
         local headPosition = player.Position + Vector(0, player.TearHeight) 
 
         -- Inicialización de la barra de carga si no existe
-        if not pData.ChargeBar then
-            pData.ChargeBar = utils.ChargeBar()
+        if not pData.Yami.ChargeBar then
+            pData.Yami.ChargeBar = utils.Yami_ChargeBar()
         end
 
         -- Inicialización del contador de retraso si no existe
-        if not pData.ChargeStartDelay then
-            pData.ChargeStartDelay = 0
+        if not pData.Yami.ChargeStartDelay then
+            pData.Yami.ChargeStartDelay = 0
         end
 
-        if pData.IsFullCharge then
-            pData.ChargeProgress = 0
-            pData.IsFullCharge = false
+        if pData.Yami.IsFullCharge then
+            pData.Yami.ChargeProgress = 0
+            pData.Yami.IsFullCharge = false
         end
 
         -- Calcula la duración ajustada de la carga del melee
@@ -811,56 +848,57 @@ function Lust:UpdateMelee(player)
             (fireDelay * (meleeChargeMaxTime / 10)),
             meleeChargeMinTime
         )
-        pData.ChargingValue = math.max(0.0, math.min(1.0, pData.ChargeProgress / adjustedChargeTime))
+        pData.Yami.ChargingValue = math.max(0.0, math.min(1.0, pData.Yami.ChargeProgress / adjustedChargeTime))
         
         local fireInput = player:GetShootingInput()
 
         local fireDirection, lastFireDirection = utils.GetShootingDirection(player)
-        local isShooting = fireDirection:Length() > 0.2 or (fireInput:Length() > 0.2 and fireDirection:Length() > 0.2)
+        --local isShooting = fireDirection:Length() > 0.2 or (fireInput:Length() > 0.2 and fireDirection:Length() > 0.2)
+        local isShooting = fireDirection:Length() > 0.2 or fireInput:Length() > 0.2
 
         if player:HasCollectible(CollectibleType.COLLECTIBLE_KIDNEY_STONE) then
             --print("Is Shooting: ", fireDirection, fireInput)
         end
 
         if utils.IsDirectionalShooting(player) then
-            pData.MeleeHitbox = pData.MeleeWeapon
-            pData.MeleeHitbox:SetDamageSource(EntityType.ENTITY_PLAYER)
-            pData.MeleeHitbox.CollisionDamage = player.Damage / directionalDamageReduction
+            pData.Yami.MeleeHitbox = pData.Yami.MeleeWeapon
+            pData.Yami.MeleeHitbox:SetDamageSource(EntityType.ENTITY_PLAYER)
+            pData.Yami.MeleeHitbox.CollisionDamage = player.Damage / directionalDamageReduction
             if isShooting then
                 if player:HasCollectible(CollectibleType.COLLECTIBLE_DEAD_TOOTH) then
-                    if not pData.DeadToothRing then
-                        pData.DeadToothRing = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.FART_RING, 0, headPosition, Vector.Zero, player):ToEffect()
-                        pData.DeadToothRing:AddEntityFlags(EntityFlag.FLAG_DONT_OVERWRITE | EntityFlag.FLAG_PERSISTENT)
-                        pData.DeadToothRing:FollowParent(player)
-                        --pData.DeadToothRing.SortingLayer = SortingLayer.SORTING_NORMAL
-                        pData.DeadToothRing.DepthOffset = 200
+                    if not pData.Yami.DeadToothRing then
+                        pData.Yami.DeadToothRing = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.FART_RING, 0, headPosition, Vector.Zero, player):ToEffect()
+                        pData.Yami.DeadToothRing:AddEntityFlags(EntityFlag.FLAG_DONT_OVERWRITE | EntityFlag.FLAG_PERSISTENT)
+                        pData.Yami.DeadToothRing:FollowParent(player)
+                        --pData.Yami.DeadToothRing.SortingLayer = SortingLayer.SORTING_NORMAL
+                        pData.Yami.DeadToothRing.DepthOffset = 200
                     else 
-                        --pData.DeadToothRing.CollisionDamage = player.Damage / directionalDamageReduction
+                        --pData.Yami.DeadToothRing.CollisionDamage = player.Damage / directionalDamageReduction
                     end
                 end
             end
-            --pData.MeleeHitbox:Update()
-            Lust:PostUpdateMelee(player, lastFireDirection, pData.MeleeHitbox.Position)
+            --pData.Yami.MeleeHitbox:Update()
+            Lust:PostUpdateMelee(player, lastFireDirection, pData.Yami.MeleeHitbox.Position)
         else 
             -- Detectamos si el jugador ha soltado el disparo
-            local hasReleased = not isShooting and pData.WasShooting
+            local hasReleased = not isShooting and pData.Yami.WasShooting
     
             local inverseCharge = player:HasCollectible(CollectibleType.COLLECTIBLE_NEPTUNUS)
 
-            if pData.MeleeWeapon and pData.MeleeWeapon:Exists() then
-                local weaponSprite = pData.MeleeWeapon:GetSprite()
+            if pData.Yami.MeleeWeapon and pData.Yami.MeleeWeapon:Exists() then
+                local weaponSprite = pData.Yami.MeleeWeapon:GetSprite()
 
                 if inverseCharge then
                     -- Incrementar el tiempo de espera antes de cargar la barra
-                    pData.ChargeStartDelay = math.min(pData.ChargeStartDelay + 1, meleeChargeInitDelay) -- Retraso de 30 frames (medio segundo a 60 FPS)
+                    pData.Yami.ChargeStartDelay = math.min(pData.Yami.ChargeStartDelay + 1, meleeChargeInitDelay) -- Retraso de 30 frames (medio segundo a 60 FPS)
 
-                    if pData.ChargeStartDelay >= meleeChargeInitDelay then
-                        if pData.DoOnceChargingSound then
+                    if pData.Yami.ChargeStartDelay >= meleeChargeInitDelay then
+                        if pData.Yami.DoOnceChargingSound then
                             SFXManager():Play(SoundEffect.SOUND_LIGHTBOLT_CHARGE)
-                            pData.DoOnceChargingSound = false
+                            pData.Yami.DoOnceChargingSound = false
                         end
-                        pData.ChargeProgress = math.min(pData.ChargeBar.chargeProgress + 1, adjustedChargeTime) -- Incrementa progresivamente hasta 100
-                        pData.ChargeBar:SetCharge(pData.ChargeProgress, adjustedChargeTime) -- Actualiza la barra
+                        pData.Yami.ChargeProgress = math.min(pData.Yami.ChargeBar.chargeProgress + 1, adjustedChargeTime) -- Incrementa progresivamente hasta 100
+                        pData.Yami.ChargeBar:SetCharge(pData.Yami.ChargeProgress, adjustedChargeTime) -- Actualiza la barra
                     end
                 end
 
@@ -868,52 +906,52 @@ function Lust:UpdateMelee(player)
                 if isShooting then
 
                     if player:HasCollectible(CollectibleType.COLLECTIBLE_ANALOG_STICK) then
-                        pData.MeleeLastFireDirection = player:GetLastDirection()
+                        pData.Yami.MeleeLastFireDirection = player:GetLastDirection()
                     else
-                        pData.MeleeLastFireDirection = fireDirection
+                        pData.Yami.MeleeLastFireDirection = fireDirection
                     end
                     
                     if not inverseCharge then
                         -- Incrementar el tiempo de espera antes de cargar la barra
-                        pData.ChargeStartDelay = math.min(pData.ChargeStartDelay + 1, meleeChargeInitDelay) -- Retraso de 30 frames (medio segundo a 60 FPS)
+                        pData.Yami.ChargeStartDelay = math.min(pData.Yami.ChargeStartDelay + 1, meleeChargeInitDelay) -- Retraso de 30 frames (medio segundo a 60 FPS)
                         
                         -- Si ha pasado el tiempo de espera, empieza a cargar la barra
-                        if pData.ChargeStartDelay >= meleeChargeInitDelay then
-                            if pData.DoOnceChargingSound then
+                        if pData.Yami.ChargeStartDelay >= meleeChargeInitDelay then
+                            if pData.Yami.DoOnceChargingSound then
                                 SFXManager():Play(SoundEffect.SOUND_LIGHTBOLT_CHARGE)
-                                pData.DoOnceChargingSound = false
+                                pData.Yami.DoOnceChargingSound = false
                             end
-                            pData.ChargeProgress = math.min(pData.ChargeBar.chargeProgress + 1, adjustedChargeTime) -- Incrementa progresivamente hasta 100
-                            pData.ChargeBar:SetCharge(pData.ChargeProgress, adjustedChargeTime) -- Actualiza la barra
+                            pData.Yami.ChargeProgress = math.min(pData.Yami.ChargeBar.chargeProgress + 1, adjustedChargeTime) -- Incrementa progresivamente hasta 100
+                            pData.Yami.ChargeBar:SetCharge(pData.Yami.ChargeProgress, adjustedChargeTime) -- Actualiza la barra
                         end
 
                     end
 
 
                     --local timeToSpawnMawVoid = 45
-                    pData.TimeAttacking = pData.TimeAttacking + 1
-                    --print("pData.TimeAttacking: ", pData.TimeAttacking)
-                    --if pData.TimeAttacking >= timeToSpawnMawVoid then
-                    --    pData.MawOfVoidReady = true
+                    pData.Yami.TimeAttacking = pData.Yami.TimeAttacking + 1
+                    --print("pData.Yami.TimeAttacking: ", pData.Yami.TimeAttacking)
+                    --if pData.Yami.TimeAttacking >= timeToSpawnMawVoid then
+                    --    pData.Yami.MawOfVoidReady = true
                        -- print("Maw ready!")
                    -- end
 
                    if player:HasCollectible(CollectibleType.COLLECTIBLE_DEAD_TOOTH) then
-                        if not pData.DeadToothRing then
-                            pData.DeadToothRing = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.FART_RING, 0, headPosition, Vector.Zero, player):ToEffect()
-                            pData.DeadToothRing:AddEntityFlags(EntityFlag.FLAG_DONT_OVERWRITE | EntityFlag.FLAG_PERSISTENT)
-                            pData.DeadToothRing:FollowParent(player)
-                            --pData.DeadToothRing.SortingLayer = SortingLayer.SORTING_NORMAL
-                            pData.DeadToothRing.DepthOffset = 200
+                        if not pData.Yami.DeadToothRing then
+                            pData.Yami.DeadToothRing = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.FART_RING, 0, headPosition, Vector.Zero, player):ToEffect()
+                            pData.Yami.DeadToothRing:AddEntityFlags(EntityFlag.FLAG_DONT_OVERWRITE | EntityFlag.FLAG_PERSISTENT)
+                            pData.Yami.DeadToothRing:FollowParent(player)
+                            --pData.Yami.DeadToothRing.SortingLayer = SortingLayer.SORTING_NORMAL
+                            pData.Yami.DeadToothRing.DepthOffset = 200
                         else 
-                            --pData.DeadToothRing.CollisionDamage = player.Damage / directionalDamageReduction
+                            --pData.Yami.DeadToothRing.CollisionDamage = player.Damage / directionalDamageReduction
                         end
                     end
                 else
                     -- Resetear la barra si el botón se ha soltado
                     if not inverseCharge then
-                        pData.ChargeBar:SetCharge(0, adjustedChargeTime)
-                        pData.ChargeStartDelay = 0
+                        pData.Yami.ChargeBar:SetCharge(0, adjustedChargeTime)
+                        pData.Yami.ChargeStartDelay = 0
                     end
                 end
                 
@@ -921,24 +959,24 @@ function Lust:UpdateMelee(player)
                 -- Si soltó el disparo, ejecuta el ataque
                 if hasReleased then
                     if inverseCharge then
-                        pData.ChargeBar:SetCharge(0, adjustedChargeTime)
-                        pData.ChargeStartDelay = 0
+                        pData.Yami.ChargeBar:SetCharge(0, adjustedChargeTime)
+                        pData.Yami.ChargeStartDelay = 0
                     end
 
-                    if pData.DeadToothRing then
-                        pData.DeadToothRing:Remove()
-                        pData.DeadToothRing = nil
+                    if pData.Yami.DeadToothRing then
+                        pData.Yami.DeadToothRing:Remove()
+                        pData.Yami.DeadToothRing = nil
                     end
 
-                    if player.FireDelay <= 0 and not pData.MeleeAttackTriggered and player:IsExtraAnimationFinished() and player.ControlsEnabled then
-                        pData.DoOnceChargingSound = true
+                    if player.FireDelay <= 0 and not pData.Yami.MeleeAttackTriggered and player:IsExtraAnimationFinished() and player.ControlsEnabled then
+                        pData.Yami.DoOnceChargingSound = true
                         -- Comprobar si la barra está cargada al máximo
-                        pData.IsFullCharge = pData.ChargeProgress >= adjustedChargeTime
+                        pData.Yami.IsFullCharge = pData.Yami.ChargeProgress >= adjustedChargeTime
                         
-                        pData.CurrentEye = (pData.CurrentEye % (utils.Eyes.NUM_EYES - 1)) + 1
+                        pData.Yami.CurrentEye = (pData.Yami.CurrentEye % (utils.Eyes.NUM_EYES - 1)) + 1
 
                         if player:HasCollectible(CollectibleType.COLLECTIBLE_LEAD_PENCIL) then
-                            pData.CurrentEye = utils.Eyes.RIGHT
+                            pData.Yami.CurrentEye = utils.Eyes.RIGHT
                         end 
                         
                         -- Control de animaciones del ataque
@@ -949,16 +987,16 @@ function Lust:UpdateMelee(player)
                         --weaponSprite:Update()
                         --print("Aim: ", player:GetLastDirection())
 
-                        lastFireDirection = pData.MeleeLastFireDirection
+                        lastFireDirection = pData.Yami.MeleeLastFireDirection
                         
                         if player:HasCollectible(CollectibleType.COLLECTIBLE_EPIPHORA) then
-                            if pData.PrevAttackDirection and utils.VectorEquals(pData.PrevAttackDirection, lastFireDirection) then
-                                if pData.TimeMarkSameDirection == 0 then
-                                    pData.TimeMarkSameDirection = pData.TimeAttacking
+                            if pData.Yami.PrevAttackDirection and utils.VectorEquals(pData.Yami.PrevAttackDirection, lastFireDirection) then
+                                if pData.Yami.TimeMarkSameDirection == 0 then
+                                    pData.Yami.TimeMarkSameDirection = pData.Yami.TimeAttacking
                                 end 
                             else
-                                pData.PrevAttackDirection = lastFireDirection
-                                pData.TimeMarkSameDirection = 0
+                                pData.Yami.PrevAttackDirection = lastFireDirection
+                                pData.Yami.TimeMarkSameDirection = 0
                             end
                         end
 
@@ -1122,7 +1160,7 @@ function Lust:UpdateMelee(player)
                         end
 
                         if player:HasCollectible(CollectibleType.COLLECTIBLE_CURSED_EYE) then
-                            local numberAttacks = math.max(0, math.min(4, pData.ChargingValue / 0.25))
+                            local numberAttacks = math.max(0, math.min(4, pData.Yami.ChargingValue / 0.25))
 
                             local angles = {-15, -5, 5, 15}
 
@@ -1153,7 +1191,7 @@ function Lust:UpdateMelee(player)
                         end
 
                         if player:HasCollectible(CollectibleType.COLLECTIBLE_MONSTROS_LUNG) 
-                            or (player:HasCollectible(CollectibleType.COLLECTIBLE_LEAD_PENCIL) and pData.TotalAttacksNum%15 == 0) then
+                            or (player:HasCollectible(CollectibleType.COLLECTIBLE_LEAD_PENCIL) and pData.Yami.TotalAttacksNum%15 == 0) then
                             -- Angulos en grados para los disparos en forma de abanico
                             local angles = {-20, -10, 10, 20}
                             --local isFirstAngle = true
@@ -1187,15 +1225,15 @@ function Lust:UpdateMelee(player)
 
                         for _, direction in ipairs(attacks) do
 
-                            pData.TotalAttacksNum = pData.TotalAttacksNum + 1
+                            pData.Yami.TotalAttacksNum = pData.Yami.TotalAttacksNum + 1
 
                             --if numAttacks > 1 then
                             lastFireDirection = direction
                             --end
 
                             -- Crear el hitbox del ataque
-                            pData.MeleeHitbox = Isaac.Spawn(EntityType.ENTITY_EFFECT, weaponAttack, 0, player.Position, Vector.Zero, player):ToEffect()
-                            local hitbox = pData.MeleeHitbox
+                            pData.Yami.MeleeHitbox = Isaac.Spawn(EntityType.ENTITY_EFFECT, weaponAttack, 0, player.Position, Vector.Zero, player):ToEffect()
+                            local hitbox = pData.Yami.MeleeHitbox
                             local hitboxSprite = hitbox:GetSprite()
         
                             -- Configurar el hitbox con la animación del arma
@@ -1204,7 +1242,7 @@ function Lust:UpdateMelee(player)
                             hitboxSprite.Offset = lastFireDirection:Resized(-meleeDistance * 0.5) + Vector(0, meleeSpriteOffset)
         
                             local vecScale = Vector.One
-                            --if pData.IsFullCharge then 
+                            --if pData.Yami.IsFullCharge then 
                             --    vecScale =  Vector(0.4, 2.0)
                             --end
                             
@@ -1227,7 +1265,7 @@ function Lust:UpdateMelee(player)
         
                             --[[
                             vecScale = hitbox.SizeMulti
-                            if pData.IsFullCharge then 
+                            if pData.Yami.IsFullCharge then 
                                 vecScale =  Vector(2.0, 0.4)
                             end
                             print("Animation long 3: ", vecScale);
@@ -1241,22 +1279,22 @@ function Lust:UpdateMelee(player)
                             -- Ajustar el daño del ataque
                             --print("damageBonus: ", damageBonus)
                             --print("damageMultiplier: ", damageMultiplier)
-                            --print("Delay: ", pData.ChargeProgress)
+                            --print("Delay: ", pData.Yami.ChargeProgress)
                             hitbox.CollisionDamage = utils.ApplyDamageBonus(player, meleeDamageMult, meleeChargeDamageMult, adjustedChargeTime)
                             hitbox:SetTimeout(meleeTimeout)
                             --hitbox:Update()
                             -- Actualización de tiempos y estados
                             local fireDelayMultiplier = 1.0
                             local fireDelayBonus = 0.0
-                            if player:HasCollectible(CollectibleType.COLLECTIBLE_EPIPHORA) and pData.TimeMarkSameDirection ~= 0 then
-                                local timeDiff = math.max(0.0, pData.TimeAttacking - pData.TimeMarkSameDirection)
+                            if player:HasCollectible(CollectibleType.COLLECTIBLE_EPIPHORA) and pData.Yami.TimeMarkSameDirection ~= 0 then
+                                local timeDiff = math.max(0.0, pData.Yami.TimeAttacking - pData.Yami.TimeMarkSameDirection)
                                 local maxTimeEpiphoraSpeed = 100
-                                --print("pData.TimeMarkSameDirection: ", pData.TimeMarkSameDirection)
+                                --print("pData.Yami.TimeMarkSameDirection: ", pData.Yami.TimeMarkSameDirection)
                                 --print("timeDiff: ", timeDiff)
                                 fireDelayMultiplier = fireDelayMultiplier * (1.0 - (0.5 * math.min(1.0, timeDiff / maxTimeEpiphoraSpeed) ))
                                 --print("fireDelayMultiplier: ", fireDelayMultiplier)
                             end
-                            if player:HasCollectible(CollectibleType.COLLECTIBLE_EYE_DROPS) and pData.CurrentEye == utils.Eyes.LEFT then
+                            if player:HasCollectible(CollectibleType.COLLECTIBLE_EYE_DROPS) and pData.Yami.CurrentEye == utils.Eyes.LEFT then
                                 fireDelayMultiplier = fireDelayMultiplier * (1.0 - 0.4)
                             end
                             --print("fireDelayMultiplier: ", fireDelayMultiplier)
@@ -1272,33 +1310,33 @@ function Lust:UpdateMelee(player)
                         end
     
                         -- Reproducir sonido y ejecutar callback
-                        if pData.IsFullCharge then
+                        if pData.Yami.IsFullCharge then
                             SFXManager():Play(SoundEffect.SOUND_REDLIGHTNING_ZAP_WEAK)
                         else
                             SFXManager():Play(SoundEffect.SOUND_LIGHTBOLT)
                         end
                         
                         -- Marcar que el ataque fue ejecutado
-                        pData.MeleeAttackTriggered = true
+                        pData.Yami.MeleeAttackTriggered = true
                     end
                 else
                     -- Resetear el estado del ataque si es necesario
-                    if player.FireDelay <= 0 or pData.MeleeAttackTriggered then
-                        pData.MeleeAttackTriggered = false
+                    if player.FireDelay <= 0 or pData.Yami.MeleeAttackTriggered then
+                        pData.Yami.MeleeAttackTriggered = false
                     end
                 end
 
                 if isShooting then
-                    pData.TimeWithoutAttacking = 0
+                    pData.Yami.TimeWithoutAttacking = 0
                 end
             end
     
             -- Guardar si el jugador está disparando para detectar "al soltar"
-            pData.WasShooting = isShooting
+            pData.Yami.WasShooting = isShooting
         end
 
         if not isShooting then
-            pData.ChargeProgress = 0
+            pData.Yami.ChargeProgress = 0
         end
     end
 end
@@ -1311,19 +1349,19 @@ function Lust:RenderPlayer(player)
         utils.CheckFlyingStatus(player)
         utils.CheckCrownOfLightStatus(player)
         if player:IsCoopGhost() then
-            if pData.IsDeadFirstCheck then
+            if pData.Yami.IsDeadFirstCheck then
                 --player:TryRemoveNullCostume(costumeAlt)
                 --player:AddNullCostume(costume)
                 --local playerSprite = player:GetSprite()
                 --playerSprite:ReplaceSpritesheet(0, skinMain)
                 --playerSprite:LoadGraphics()
-                pData.IsDeadFirstCheck = false
-                pData.IsRenderChanged = true
+                pData.Yami.IsDeadFirstCheck = false
+                pData.Yami.IsRenderChanged = true
             end
         else
-            if pData.IsRenderChanged then
-                --print("pData.IsRenderChanged = TRUE")
-                if pData.IsCrownActive then
+            if pData.Yami.IsRenderChanged then
+                --print("pData.Yami.IsRenderChanged = TRUE")
+                if pData.Yami.IsCrownActive then
                     player:TryRemoveNullCostume(costumeFlyingAlt)
                     player:TryRemoveNullCostume(costumeAlt)
                     --print("Has Crown. Can Fly", player.CanFly)
@@ -1353,52 +1391,52 @@ function Lust:RenderPlayer(player)
                     --playerSprite:LoadGraphics()
                 end
 
-                local weaponSprite = pData.MeleeWeapon:GetSprite()
+                local weaponSprite = pData.Yami.MeleeWeapon:GetSprite()
                 if utils.CheckCrownOfLightStatus(player) then
                     weaponSprite:Play("Idle", true)
                 else 
                     weaponSprite:Play("IdleAlt", true)
                 end
 
-                pData.IsRenderChanged = false
+                pData.Yami.IsRenderChanged = false
             end
-            pData.IsDeadFirstCheck = true
+            pData.Yami.IsDeadFirstCheck = true
         end
 
         if player:HasCollectible(CollectibleType.COLLECTIBLE_BIRTHRIGHT) then
-            if not pData.FriendlyHalo and pData.IsCrownActive then
+            if not pData.Yami.FriendlyHalo and pData.Yami.IsCrownActive then
                 local headPosition = player.Position + Vector(0, player.TearHeight)
-                pData.FriendlyHalo = Isaac.Spawn(EntityType.ENTITY_EFFECT, friendlyHalo, 1, headPosition, Vector.Zero, player):ToEffect()
-                pData.FriendlyHalo:AddEntityFlags(EntityFlag.FLAG_DONT_OVERWRITE | EntityFlag.FLAG_PERSISTENT)
-                pData.FriendlyHalo:FollowParent(player)
-                pData.FriendlyHalo.Color = Color(0.2, 1.0, 1.0, 0.7, 0, 0, 0) 
-                --pData.FriendlyHalo.ParentOffset = Vector(0, meleeOffset)
+                pData.Yami.FriendlyHalo = Isaac.Spawn(EntityType.ENTITY_EFFECT, friendlyHalo, 1, headPosition, Vector.Zero, player):ToEffect()
+                pData.Yami.FriendlyHalo:AddEntityFlags(EntityFlag.FLAG_DONT_OVERWRITE | EntityFlag.FLAG_PERSISTENT)
+                pData.Yami.FriendlyHalo:FollowParent(player)
+                pData.Yami.FriendlyHalo.Color = Color(0.2, 1.0, 1.0, 0.7, 0, 0, 0) 
+                --pData.Yami.FriendlyHalo.ParentOffset = Vector(0, meleeOffset)
             end
 
-            if pData.FriendlyHalo then
-                if not pData.IsCrownActive then
-                    pData.FriendlyHalo:Remove()
-                    pData.FriendlyHalo = nil
+            if pData.Yami.FriendlyHalo then
+                if not pData.Yami.IsCrownActive then
+                    pData.Yami.FriendlyHalo:Remove()
+                    pData.Yami.FriendlyHalo = nil
                 else 
                     if utils.IsDirectionalShooting(player) then
-                        pData.FriendlyHalo.IsFollowing = false
+                        pData.Yami.FriendlyHalo.IsFollowing = false
                     else
-                        pData.FriendlyHalo.IsFollowing = true
+                        pData.Yami.FriendlyHalo.IsFollowing = true
                     end
                     local sizeRange = player.TearRange / 6.0
-                    pData.FriendlyHalo:SetSize(sizeRange, pData.FriendlyHalo.SizeMulti, 12)
-                    --pData.FriendlyHalo.SpriteScale = sizeRange / 40.0 * pData.FriendlyHalo.SizeMulti
-                    pData.FriendlyHalo.SpriteScale = sizeRange / 40.0 * pData.FriendlyHalo.SizeMulti
+                    pData.Yami.FriendlyHalo:SetSize(sizeRange, pData.Yami.FriendlyHalo.SizeMulti, 12)
+                    --pData.Yami.FriendlyHalo.SpriteScale = sizeRange / 40.0 * pData.Yami.FriendlyHalo.SizeMulti
+                    pData.Yami.FriendlyHalo.SpriteScale = sizeRange / 40.0 * pData.Yami.FriendlyHalo.SizeMulti
                 end
             end
         end
 
-        if not utils.IsDirectionalShooting(player) and Options.ChargeBars and pData.ChargeBar then
+        if not utils.IsDirectionalShooting(player) and Options.ChargeBars and pData.Yami.ChargeBar then
             local pChargeBarOffset = utils.HasChargeBarItem(player) and -1 or 1
             local pOffset = player:GetFlyingOffset() + Vector(18 * pChargeBarOffset, -54) * player.SpriteScale
 
             --local position = player.Position + Vector(0, -40)  -- Posición sobre el jugador
-            pData.ChargeBar:Render(player.Position + pOffset)
+            pData.Yami.ChargeBar:Render(player.Position + pOffset)
         end
     end
 end
@@ -1406,21 +1444,25 @@ end
 function Lust:UpdatePlayer(player)
     if player:GetPlayerType() == playerType then
         local pData = player:GetData()
-        if not pData.MeleeAttackTriggered and not utils.IsDirectionalShooting(player) then
-            pData.TimeWithoutAttacking = pData.TimeWithoutAttacking + 1
-            if pData.TimeWithoutAttacking >= 5 then
-                pData.TimeAttacking = 0
-                pData.TimeMarkSameDirection = 0
+        if not pData.Yami.MeleeAttackTriggered and not utils.IsDirectionalShooting(player) then
+            pData.Yami.TimeWithoutAttacking = pData.Yami.TimeWithoutAttacking + 1
+            if pData.Yami.TimeWithoutAttacking >= 5 then
+                pData.Yami.TimeAttacking = 0
+                pData.Yami.TimeMarkSameDirection = 0
             end
         end
-        --print("TimeMarkSameDirection: ", pData.TimeMarkSameDirection)
-        --print("timeDiff: ", math.max(0.0, pData.TimeAttacking - pData.TimeMarkSameDirection))
-        pData.IsKnockBacked = false
+        --print("TimeMarkSameDirection: ", pData.Yami.TimeMarkSameDirection)
+        --print("timeDiff: ", math.max(0.0, pData.Yami.TimeAttacking - pData.Yami.TimeMarkSameDirection))
+        pData.Yami.IsKnockBacked = false
+
+        if not utils.IsDirectionalShooting(player) then
+            Lust:RemoveDataEffects(player)
+        end
 
         local headDirection = player:GetHeadDirection()
 
-        for _, roomEntity in pairs(Isaac.GetRoomEntities()) do
-            if roomEntity.Variant == EffectVariant.EVIL_EYE and roomEntity.SpawnerEntity then
+        for _, roomEntity in pairs(Isaac.FindByType(EntityType.ENTITY_EFFECT, EffectVariant.EVIL_EYE)) do
+            if roomEntity.SpawnerEntity then
                 local playerOwner = roomEntity.SpawnerEntity:ToPlayer()
                 if playerOwner and GetPtrHash(playerOwner) == GetPtrHash(player) then
                     local lastAnimation = roomEntity:GetSprite():GetAnimation()
@@ -1437,16 +1479,16 @@ function Lust:UpdatePlayer(player)
             end
         end 
 
-        if pData.IsNewRoom then
+        if pData.Yami.IsNewRoom then
             --print("ENABLING CROWN AGAIN!")
-            pData.IsCrownDamaged = false
+            pData.Yami.IsCrownDamaged = false
 
-            if pData.DeadToothRing then
-                pData.DeadToothRing:Remove()
-                pData.DeadToothRing = nil
+            if pData.Yami.DeadToothRing then
+                pData.Yami.DeadToothRing:Remove()
+                pData.Yami.DeadToothRing = nil
             end
         end
-        pData.IsNewRoom = false
+        pData.Yami.IsNewRoom = false
     end
 end
 
@@ -1455,23 +1497,21 @@ function Lust:OnDamage(entity, amount, flag, source, countdown)
     if player and player:GetPlayerType() == playerType then
         --print("PLAYER IS DAMAGED!")
         local pData = player:GetData()
-        pData.IsCrownDamaged = true
+        pData.Yami.IsCrownDamaged = true
 
     end
 end
 
 function Lust:OnNewRoom()
-    for _, entity in ipairs(Isaac.GetRoomEntities()) do
-        if entity.Type == EntityType.ENTITY_PLAYER then
-            local player = entity:ToPlayer() -- Convierte la entidad en un jugador
+    for _, entity in ipairs(Isaac.FindByType(EntityType.ENTITY_PLAYER)) do
+        local player = entity:ToPlayer() -- Convierte la entidad en un jugador
 
-            -- Verifica si el tipo de jugador coincide con el especificado
-            if player and player:GetPlayerType() == playerType then
-                local pData = player:GetData() -- Obtiene los datos del jugador
+        -- Verifica si el tipo de jugador coincide con el especificado
+        if player and player:GetPlayerType() == playerType then
+            local pData = player:GetData() -- Obtiene los datos del jugador
 
-                -- Guarda una variable única en los datos del jugador
-                pData.IsNewRoom = true
-            end
+            -- Guarda una variable única en los datos del jugador
+            pData.Yami.IsNewRoom = true
         end
     end
 end
@@ -1479,16 +1519,16 @@ end
 
 function Lust:OnTearPreColl(entity, colEntity, low)
     local eData = entity:GetData()
-
-    if eData.IgnoreCollisionWithVariant and utils.IsValueInList(eData.IgnoreCollisionWithVariant, colEntity.Variant) then
-        if eData.IgnoreCollisionWithTime > 0 then
-            eData.IgnoreCollisionWithTime = eData.IgnoreCollisionWithTime - 1
+    if not eData.Yami then eData.Yami = {} end
+    if eData.Yami.IgnoreCollisionWithVariant and utils.IsValueInList(eData.Yami.IgnoreCollisionWithVariant, colEntity.Variant) then
+        if eData.Yami.IgnoreCollisionWithTime > 0 then
+            eData.Yami.IgnoreCollisionWithTime = eData.Yami.IgnoreCollisionWithTime - 1
         end
         return true
     end
-    if eData.IgnoreCollisionWith and utils.IsValueInList(eData.IgnoreCollisionWith, GetPtrHash(colEntity)) then
-        if eData.IgnoreCollisionWithTime > 0 then
-            eData.IgnoreCollisionWithTime = eData.IgnoreCollisionWithTime - 1
+    if eData.Yami.IgnoreCollisionWith and utils.IsValueInList(eData.Yami.IgnoreCollisionWith, GetPtrHash(colEntity)) then
+        if eData.Yami.IgnoreCollisionWithTime > 0 then
+            eData.Yami.IgnoreCollisionWithTime = eData.Yami.IgnoreCollisionWithTime - 1
         end
         return true
     end
@@ -1498,7 +1538,7 @@ function Lust:OnPlayerPreColl(player, colEntity, low)
     if player:GetPlayerType() == playerType then
         local pData = player:GetData()
         if player:HasCollectible(CollectibleType.COLLECTIBLE_CURSED_EYE) then
-            if pData.ChargingValue > 0.0 and pData.ChargingValue < 1.0 and colEntity.CollisionDamage > 0.0 then
+            if pData.Yami.ChargingValue > 0.0 and pData.Yami.ChargingValue < 1.0 and colEntity.CollisionDamage > 0.0 then
                 --player:GetSprite():Stop()
                 player:AnimateTeleport(true)
                 local level = game:GetLevel()
