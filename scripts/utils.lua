@@ -1,6 +1,10 @@
 local utils = {}
 
-
+function utils.GetData(entity)
+	local data = entity:GetData()
+	if not data.Yami then data.Yami = {} end
+	return data.Yami
+end
 
 function utils.TableLength(T)
 	local count = 0
@@ -34,7 +38,7 @@ function utils.GetShotSpeed(player, minVal, maxVal)
 	minVal = minVal or 4.0
 	maxVal = maxVal or 12.0
 	local shotSpeedBonus = 0
-	if player:HasCollectible(CollectibleType.COLLECTIBLE_STYE) and pData.Yami.CurrentEye == utils.Eyes.RIGHT then
+	if player:HasCollectible(CollectibleType.COLLECTIBLE_STYE) and pData.CurrentEye == utils.Eyes.RIGHT then
 		shotSpeedBonus = shotSpeedBonus - 0.3
 	end
 	--print("shotSpeedBonus: ", shotSpeedBonus)
@@ -43,12 +47,12 @@ function utils.GetShotSpeed(player, minVal, maxVal)
 end
 
 function utils.GetMeleeSize(player)
-	local pData = player:GetData()
+	local pData = utils.GetData(player)
 	local tearRangeBonus = 0
-	if player:HasCollectible(CollectibleType.COLLECTIBLE_BLOOD_CLOT) and pData.Yami.CurrentEye == utils.Eyes.LEFT then
+	if player:HasCollectible(CollectibleType.COLLECTIBLE_BLOOD_CLOT) and pData.CurrentEye == utils.Eyes.LEFT then
 		tearRangeBonus = tearRangeBonus + 2.75
 	end
-	if player:HasCollectible(CollectibleType.COLLECTIBLE_STYE) and pData.Yami.CurrentEye == utils.Eyes.RIGHT then
+	if player:HasCollectible(CollectibleType.COLLECTIBLE_STYE) and pData.CurrentEye == utils.Eyes.RIGHT then
 		tearRangeBonus = tearRangeBonus + 6.5
 	end
 	--print("tearRangeBonus: ", tearRangeBonus)
@@ -250,13 +254,13 @@ function utils.SetTearFlag(tears, flag)
 end
 
 function utils.SetAllTearFlag(player, tears, otherTears)
-	local pData = player:GetData()
+	local pData = utils.GetData(player)
 	tears.TearFlags = otherTears.TearFlags
 	if utils.HasTearFlag(otherTears, TearFlags.TEAR_BELIAL) then
 		utils.SetTearFlag(tears, TearFlags.TEAR_HOMING)
 	end
 	if player:HasCollectible(CollectibleType.COLLECTIBLE_GLAUCOMA) then
-		local rand = utils.RandomRange(pData.Yami.RNG, 0.0, 1.0) 
+		local rand = utils.RandomRange(pData.RNG, 0.0, 1.0) 
 		local prob = 0.05
 		if rand <= prob then
 			utils.SetTearFlag(tears, TearFlags.TEAR_CONFUSION)
@@ -362,46 +366,46 @@ function utils.GetPlayerFromTear(tear)
 end
 
 function utils.CheckFlyingStatus(player)
-	local pData = player:GetData()
-	if player.CanFly and not pData.Yami.PrevFlyingValue then
-		pData.Yami.IsRenderChanged = true
-		pData.Yami.PrevFlyingValue = true
-	elseif not player.CanFly and pData.Yami.PrevFlyingValue then
-		pData.Yami.IsRenderChanged = true
-		pData.Yami.PrevFlyingValue = false
+	local pData = utils.GetData(player)
+	if player.CanFly and not pData.PrevFlyingValue then
+		pData.IsRenderChanged = true
+		pData.PrevFlyingValue = true
+	elseif not player.CanFly and pData.PrevFlyingValue then
+		pData.IsRenderChanged = true
+		pData.PrevFlyingValue = false
 	end
 end
 
 -- Función que verifica si el jugador tiene Crown of Light y si está activa
 function utils.CheckCrownOfLightStatus(player)
-	local pData = player:GetData()
+	local pData = utils.GetData(player)
 
     -- Verificar si el jugador tiene el item Crown of Light
     if player:HasCollectible(CollectibleType.COLLECTIBLE_CROWN_OF_LIGHT) then
         -- Verificar si el jugador tiene salud completa
         if player:GetHearts() == (player:GetMaxHearts() + 2*player:GetBoneHearts() )
-			and not pData.Yami.IsCrownDamaged then
-			if not pData.Yami.IsCrownActive then 
-				pData.Yami.IsRenderChanged = true
-				--print("CROWN IS ACTIVATED!", pData.Yami.IsRenderChanged)
+			and not pData.IsCrownDamaged then
+			if not pData.IsCrownActive then 
+				pData.IsRenderChanged = true
+				--print("CROWN IS ACTIVATED!", pData.IsRenderChanged)
 			end
-            pData.Yami.IsCrownActive = true
+            pData.IsCrownActive = true
         else
-			if pData.Yami.IsCrownActive then 
-				pData.Yami.IsRenderChanged = true
+			if pData.IsCrownActive then 
+				pData.IsRenderChanged = true
 				--print("CROWN IS NOT ACTIVATED!")
 			end
-            pData.Yami.IsCrownActive = false
+            pData.IsCrownActive = false
         end
     else
 		player:AddCollectible(CollectibleType.COLLECTIBLE_CROWN_OF_LIGHT)
-		if not pData.Yami.IsCrownActive then 
-			pData.Yami.IsRenderChanged = true
+		if not pData.IsCrownActive then 
+			pData.IsRenderChanged = true
 		end
-        pData.Yami.IsCrownActive = true
+        pData.IsCrownActive = true
     end
 
-	return pData.Yami.IsCrownActive
+	return pData.IsCrownActive
 end
 
 function utils.IsDirectionalShooting(player)
@@ -468,30 +472,30 @@ end
 
 
 function utils.ApplyDamageBonus(player, meleeDamageMult, meleeChargeDamageMult, adjustedChargeTime)
-	local pData = player:GetData()
+	local pData = utils.GetData(player)
 	local damageBonus = 0.0
-	local damageMultiplier = pData.Yami.IsFullCharge and meleeChargeDamageMult or meleeDamageMult  -- Doble daño si está cargado
+	local damageMultiplier = pData.IsFullCharge and meleeChargeDamageMult or meleeDamageMult  -- Doble daño si está cargado
 	if player:HasCollectible(CollectibleType.COLLECTIBLE_PROPTOSIS) then
-		if pData.Yami.IsFullCharge then
+		if pData.IsFullCharge then
 			damageMultiplier = 0.5
 		else 
 			damageMultiplier = 1.5
 		end
 	end
 	if player:HasCollectible(CollectibleType.COLLECTIBLE_CHOCOLATE_MILK) then
-		local percentCharged = pData.Yami.ChargeProgress / adjustedChargeTime
+		local percentCharged = pData.ChargeProgress / adjustedChargeTime
 		damageMultiplier = damageMultiplier + percentCharged * 1.5
 	end
 	if player:HasCollectible(CollectibleType.COLLECTIBLE_LUMP_OF_COAL) then
 		damageMultiplier = damageMultiplier + 0.5
 	end
-	if player:HasCollectible(CollectibleType.COLLECTIBLE_STYE) and pData.Yami.CurrentEye == utils.Eyes.RIGHT then
+	if player:HasCollectible(CollectibleType.COLLECTIBLE_STYE) and pData.CurrentEye == utils.Eyes.RIGHT then
 		damageMultiplier = damageMultiplier + 0.28
 	end
-	if player:HasCollectible(CollectibleType.COLLECTIBLE_CHEMICAL_PEEL) and pData.Yami.CurrentEye == utils.Eyes.LEFT then
+	if player:HasCollectible(CollectibleType.COLLECTIBLE_CHEMICAL_PEEL) and pData.CurrentEye == utils.Eyes.LEFT then
 		damageBonus = damageBonus + 2.0
 	end
-	if player:HasCollectible(CollectibleType.COLLECTIBLE_BLOOD_CLOT) and pData.Yami.CurrentEye == utils.Eyes.LEFT then
+	if player:HasCollectible(CollectibleType.COLLECTIBLE_BLOOD_CLOT) and pData.CurrentEye == utils.Eyes.LEFT then
 		damageBonus = damageBonus + 1.0
 	end
 	if player:HasCollectible(CollectibleType.COLLECTIBLE_MONSTROS_LUNG) then
@@ -500,13 +504,13 @@ function utils.ApplyDamageBonus(player, meleeDamageMult, meleeChargeDamageMult, 
 	if player:HasCollectible(CollectibleType.COLLECTIBLE_DEAD_EYE) then
 		local bonusDeadEye = 0
 		
-		if pData.Yami.SuccesfulEnemyHit == 1 then
+		if pData.SuccesfulEnemyHit == 1 then
 			bonusDeadEye = 0.25
-		elseif pData.Yami.SuccesfulEnemyHit == 2 then
+		elseif pData.SuccesfulEnemyHit == 2 then
 			bonusDeadEye = 0.5
-		elseif pData.Yami.SuccesfulEnemyHit == 3 then
+		elseif pData.SuccesfulEnemyHit == 3 then
 			bonusDeadEye = 1
-		elseif pData.Yami.SuccesfulEnemyHit >= 4 then
+		elseif pData.SuccesfulEnemyHit >= 4 then
 			bonusDeadEye = 2
 		end
 		
@@ -514,7 +518,7 @@ function utils.ApplyDamageBonus(player, meleeDamageMult, meleeChargeDamageMult, 
 	end
 	--print("damageBonus: ", damageBonus)
 	--print("damageMultiplier: ", damageMultiplier)
-	--print("Delay: ", pData.Yami.ChargeProgress)
+	--print("Delay: ", pData.ChargeProgress)
 	return (player.Damage + damageBonus) * damageMultiplier
 end
 
@@ -578,8 +582,7 @@ local PICKUP_PUSH_BLACKLIST = {
 }
 
 function utils.OpenChest(player, pickup)
-	local pData = player:GetData()
-	if not pickup:GetData().Yami then pickup:GetData().Yami = {} end
+	local pData = utils.GetData(player)
 	local canOpenChest = (
 		pickup.Variant == PickupVariant.PICKUP_REDCHEST or    -- Cofre rojo
 		pickup.Variant == PickupVariant.PICKUP_SPIKEDCHEST or -- Cofre con pinchos
@@ -595,12 +598,12 @@ function utils.OpenChest(player, pickup)
 
 	-- Si es un cofre abrible, forzar su apertura
 	if canOpenChest and not isAlreadyOpen then
-		if pData.Yami.Game and pData.Yami.Game:GetRoom() then
-			local room = pData.Yami.Game:GetRoom()
+		if pData.Game and pData.Game:GetRoom() then
+			local room = pData.Game:GetRoom()
 			if room:GetType() ~= RoomType.ROOM_CHALLENGE or room:IsAmbushDone() then
 				sprite:Play("Open", true)
 				pickup:TryOpenChest(player)  -- Abre el cofre automáticamente
-				pickup:GetData().Yami.Opened = true  -- Marca el cofre como abierto
+				utils.GetData(pickup).Opened = true  -- Marca el cofre como abierto
 			end
 		end
 	end
@@ -624,11 +627,10 @@ function utils.PushNearPickups(player, position, radius, knockback)
 end
 
 function utils.GetItem(player, pickup, source, position, radius, knockback)
-	local pData = player:GetData()
-	if not pickup:GetData().Yami then pickup:GetData().Yami = {} end
-	if not source and pickup:GetData().Yami.PostGotWhip then return end
-	if pickup:GetData().Yami.PreGotWhip and not source then
-		pickup:GetData().Yami.PostGotWhip = true
+	local pData = utils.GetData(player)
+	if not source and utils.GetData(pickup).PostGotWhip then return end
+	if utils.GetData(pickup).PreGotWhip and not source then
+		utils.GetData(pickup).PostGotWhip = true
 	end
 	if pickup.Variant == PickupVariant.PICKUP_HEART then
 		--print("Hearts Test: ", player:CanPickRedHearts(), player:GetHearts(), player:GetMaxHearts(), player:HasFullHearts(), player:GetSoulHearts())
@@ -636,62 +638,62 @@ function utils.GetItem(player, pickup, source, position, radius, knockback)
 			if not source then 
 				player:AddHearts(2)
 			else
-				pickup:GetData().Yami.PreGotWhip = true
+				utils.GetData(pickup).PreGotWhip = true
 			end
 		elseif pickup.SubType == HeartSubType.HEART_HALF and player:CanPickRedHearts() then
 			if not source then 
 				player:AddHearts(1)
 			else
-				pickup:GetData().Yami.PreGotWhip = true
+				utils.GetData(pickup).PreGotWhip = true
 			end
 		elseif pickup.SubType == HeartSubType.HEART_SOUL and player:CanPickSoulHearts() then
 			if not source then 
 				player:AddSoulHearts(2)
 			else
-				pickup:GetData().Yami.PreGotWhip = true
+				utils.GetData(pickup).PreGotWhip = true
 			end
 		elseif pickup.SubType == HeartSubType.HEART_ETERNAL then
 			if not source then 
 				player:AddEternalHearts(1)
 			else
-				pickup:GetData().Yami.PreGotWhip = true
+				utils.GetData(pickup).PreGotWhip = true
 			end
 		elseif pickup.SubType == HeartSubType.HEART_DOUBLEPACK and player:CanPickRedHearts() then
 			if not source then 
 				player:AddHearts(4)
 			else
-				pickup:GetData().Yami.PreGotWhip = true
+				utils.GetData(pickup).PreGotWhip = true
 			end
 		elseif pickup.SubType == HeartSubType.HEART_BLACK and player:CanPickBlackHearts() then
 			if not source then 
 				player:AddBlackHearts(2)
 			else
-				pickup:GetData().Yami.PreGotWhip = true
+				utils.GetData(pickup).PreGotWhip = true
 			end
 		elseif pickup.SubType == HeartSubType.HEART_GOLDEN and player:CanPickGoldenHearts() then
 			if not source then 
 				player:AddGoldenHearts(1)
 			else
-				pickup:GetData().Yami.PreGotWhip = true
+				utils.GetData(pickup).PreGotWhip = true
 			end
 		elseif pickup.SubType == HeartSubType.HEART_HALF_SOUL and player:CanPickSoulHearts() then
 			if not source then 
 				player:AddSoulHearts(1)
 			else
-				pickup:GetData().Yami.PreGotWhip = true
+				utils.GetData(pickup).PreGotWhip = true
 			end
 		elseif pickup.SubType == HeartSubType.HEART_BLENDED and (player:CanPickRedHearts() or player:CanPickSoulHearts()) then
 			if not source then 
 				player:AddHearts(1)
 				player:AddSoulHearts(1)
 			else
-				pickup:GetData().Yami.PreGotWhip = true
+				utils.GetData(pickup).PreGotWhip = true
 			end
 		elseif pickup.SubType == HeartSubType.HEART_BONE and player:CanPickBoneHearts() then
 			if not source then 
 				player:AddBoneHearts(1)
 			else
-				pickup:GetData().Yami.PreGotWhip = true
+				utils.GetData(pickup).PreGotWhip = true
 			end
 		elseif source then
 			utils.PushNearPickups(source, position, radius, knockback)
@@ -703,19 +705,19 @@ function utils.GetItem(player, pickup, source, position, radius, knockback)
 			if not source then 
 				player:AddKeys(1)
 			else
-				pickup:GetData().Yami.PreGotWhip = true
+				utils.GetData(pickup).PreGotWhip = true
 			end
 		elseif pickup.SubType == KeySubType.KEY_DOUBLEPACK and player:GetNumKeys() <= 98 then
 			if not source then 
 				player:AddKeys(2)
 			else
-				pickup:GetData().Yami.PreGotWhip = true
+				utils.GetData(pickup).PreGotWhip = true
 			end
 		elseif pickup.SubType == KeySubType.KEY_GOLDEN and not player:HasGoldenKey() then
 			if not source then 
 				player:AddGoldenKey()
 			else
-				pickup:GetData().Yami.PreGotWhip = true
+				utils.GetData(pickup).PreGotWhip = true
 			end
 		elseif source then
 			utils.PushNearPickups(source, position, radius, knockback)
@@ -728,53 +730,53 @@ function utils.GetItem(player, pickup, source, position, radius, knockback)
 			if not source then 
 				player:AddCoins(1)
 			else
-				pickup:GetData().Yami.PreGotWhip = true
+				utils.GetData(pickup).PreGotWhip = true
 			end
 		elseif pickup.SubType == CoinSubType.COIN_DOUBLEPACK and (player:GetNumCoins() <= 98 or 
 			(player:HasCollectible(CollectibleType.COLLECTIBLE_DEEP_POCKETS) and player:GetNumCoins() <= 998)) then
 			if not source then 
 				player:AddCoins(2)
 			else
-				pickup:GetData().Yami.PreGotWhip = true
+				utils.GetData(pickup).PreGotWhip = true
 			end
 		elseif pickup.SubType == CoinSubType.COIN_NICKEL and (player:GetNumCoins() <= 98 or 
 			(player:HasCollectible(CollectibleType.COLLECTIBLE_DEEP_POCKETS) and player:GetNumCoins() <= 998)) then
 			if not source then 
 				player:AddCoins(5)
 			else
-				pickup:GetData().Yami.PreGotWhip = true
+				utils.GetData(pickup).PreGotWhip = true
 			end
 		elseif pickup.SubType == CoinSubType.COIN_DIME and (player:GetNumCoins() <= 98 or 
 			(player:HasCollectible(CollectibleType.COLLECTIBLE_DEEP_POCKETS) and player:GetNumCoins() <= 998)) then
 			if not source then 
 				player:AddCoins(10)
 			else
-				pickup:GetData().Yami.PreGotWhip = true
+				utils.GetData(pickup).PreGotWhip = true
 			end
 		elseif pickup.SubType == CoinSubType.COIN_LUCKYPENNY and (player:GetNumCoins() <= 98 or 
 			(player:HasCollectible(CollectibleType.COLLECTIBLE_DEEP_POCKETS) and player:GetNumCoins() <= 998)) then
-				pickup:GetData().Yami.PreGotWhip = true
-				pickup:GetData().Yami.PreGotWhipNotWait = true
+				utils.GetData(pickup).PreGotWhip = true
+				utils.GetData(pickup).PreGotWhipNotWait = true
 			--if not source then 
 				--player:AddCoins(1)
 				--player:AnimateHappy()
-				--pData.Yami.Game:GetHUD():ShowItemText("LUCKY PENNY", "Luck up")
+				--pData.Game:GetHUD():ShowItemText("LUCKY PENNY", "Luck up")
 				--SFXManager():Play(SoundEffect.SOUND_LUCKYPICKUP)
 
 
 				----pickup.Touched = true
 			--else
-				--pickup:GetData().Yami.PreGotWhip = true
+				--pickup).PreGotWhip = true
 			--end
 		elseif pickup.SubType == CoinSubType.COIN_GOLDEN and (player:GetNumCoins() <= 98 or 
 			(player:HasCollectible(CollectibleType.COLLECTIBLE_DEEP_POCKETS) and player:GetNumCoins() <= 998)) then
-				pickup:GetData().Yami.PreGotWhip = true
-				pickup:GetData().Yami.PreGotWhipNotWait = true
+				utils.GetData(pickup).PreGotWhip = true
+				utils.GetData(pickup).PreGotWhipNotWait = true
 		elseif pickup.SubType == CoinSubType.COIN_STICKYNICKEL then
 			--[[if not source then 
 				player:AddCoins(10)
 			else
-				pickup:GetData().Yami.PreGotWhip = true
+				pickup).PreGotWhip = true
 			end--]]
 			--SFXManager():Play(SoundEffect.SOUND_NICKELDROP)
 			pickup:GetSprite():Play("Touched", true)
@@ -788,19 +790,19 @@ function utils.GetItem(player, pickup, source, position, radius, knockback)
 			if not source then 
 				player:AddBombs(1)
 			else
-				pickup:GetData().Yami.PreGotWhip = true
+				utils.GetData(pickup).PreGotWhip = true
 			end
 		elseif pickup.SubType == BombSubType.BOMB_DOUBLEPACK and player:GetNumBombs() <= 98 then
 			if not source then 
 				player:AddBombs(2)
 			else
-				pickup:GetData().Yami.PreGotWhip = true
+				utils.GetData(pickup).PreGotWhip = true
 			end
 		elseif pickup.SubType == BombSubType.BOMB_GOLDEN and not player:HasGoldenBomb() then
 			if not source then 
 				player:AddGoldenBomb()
 			else
-				pickup:GetData().Yami.PreGotWhip = true
+				utils.GetData(pickup).PreGotWhip = true
 			end
 		elseif source then
 			utils.PushNearPickups(source, position, radius, knockback)
@@ -812,7 +814,7 @@ function utils.GetItem(player, pickup, source, position, radius, knockback)
 
 			player:AddTrinket(pickup.SubType)
 		else
-			pickup:GetData().Yami.PreGotWhip = true
+			utils.GetData(pickup).PreGotWhip = true
 		end
 	elseif pickup.Variant == PickupVariant.PICKUP_TAROTCARD then
 		if not source then 
@@ -820,7 +822,7 @@ function utils.GetItem(player, pickup, source, position, radius, knockback)
 
 			player:AddCard(pickup.SubType)
 		else
-			pickup:GetData().Yami.PreGotWhip = true
+			utils.GetData(pickup).PreGotWhip = true
 		end
 	elseif pickup.Variant == PickupVariant.PICKUP_PILL then
 		if not source then 
@@ -828,33 +830,33 @@ function utils.GetItem(player, pickup, source, position, radius, knockback)
 
 			player:AddPill(pickup.SubType)
 		else
-			pickup:GetData().Yami.PreGotWhip = true
+			utils.GetData(pickup).PreGotWhip = true
 		end
 	elseif pickup.Variant == PickupVariant.PICKUP_LIL_BATTERY then
 		if player:NeedsCharge(ActiveSlot.SLOT_PRIMARY) or player:NeedsCharge(ActiveSlot.SLOT_SECONDARY)
 			or player:NeedsCharge(ActiveSlot.SLOT_POCKET) or player:NeedsCharge(ActiveSlot.SLOT_POCKET2) then
-				pickup:GetData().Yami.PreGotWhip = true
-				pickup:GetData().Yami.PreGotWhipNotWait = true
+				utils.GetData(pickup).PreGotWhip = true
+				utils.GetData(pickup).PreGotWhipNotWait = true
 		elseif source then
 			utils.PushNearPickups(source, position, radius, knockback)
 			return
 		end
 	elseif pickup.Variant == PickupVariant.PICKUP_GRAB_BAG then
-		pickup:GetData().Yami.PreGotWhip = true
-		pickup:GetData().Yami.PreGotWhipNotWait = true
+		utils.GetData(pickup).PreGotWhip = true
+		utils.GetData(pickup).PreGotWhipNotWait = true
 	elseif pickup.Variant == PickupVariant.PICKUP_ITEM then
 		if not source then 
 			player:DropPocketItem(0, player.Position)
 			
 			player:PickUpItem(pickup.SubType)
 		else
-			pickup:GetData().Yami.PreGotWhip = true
+			utils.GetData(pickup).PreGotWhip = true
 		end
 	elseif source then
 		utils.PushNearPickups(source, position, radius, knockback)
 		return
 	end
-	if pickup:GetData().Yami.PreGotWhip and source and not pickup:GetData().Yami.PreGotWhipNotWait then
+	if utils.GetData(pickup).PreGotWhip and source and not utils.GetData(pickup).PreGotWhipNotWait then
 		--pickup.Timeout = 20
 		pickup.Wait = 20
 	end
@@ -871,25 +873,24 @@ function utils.CollectNearPickups(source, position, radius, knockback, delayGrab
 		
 		if pickup and not PICKUP_PUSH_BLACKLIST[pickup.Variant] and not pickup:IsShopItem() then
 			if pickup.EntityCollisionClass ~= EntityCollisionClass.ENTCOLL_NONE then
-				if not pickup:GetData().Yami then pickup:GetData().Yami = {} end
 				
-				if not pickup:GetData().Yami.PreGotWhip then
-					pickup:GetData().Yami.PreGotWhip = false
+				if not utils.GetData(pickup).PreGotWhip then
+					utils.GetData(pickup).PreGotWhip = false
 				end
 
-				if not pickup:GetData().Yami.PostGotWhip then
-					pickup:GetData().Yami.PostGotWhip = false
+				if not utils.GetData(pickup).PostGotWhip then
+					utils.GetData(pickup).PostGotWhip = false
 				end
 
 				utils.OpenChest(player, pickup)
 
-				if not pickup:GetData().Yami.PreGotWhip then
+				if not utils.GetData(pickup).PreGotWhip then
 					utils.GetItem(player, pickup, source, position, radius, knockback)
-					if pickup:GetData().Yami.PreGotWhip then
+					if utils.GetData(pickup).PreGotWhip then
 						utils.ApplyPullback(source, pickup, knockback)
 						-- Guardar el tiempo de eliminación en los datos del jugador
-						player:GetData().Yami.PickupRemoveTimer = player:GetData().Yami.PickupRemoveTimer or {}
-						player:GetData().Yami.PickupRemoveTimer[pickup] = Game():GetFrameCount() + delayGrabbingFrames
+						utils.GetData(player).PickupRemoveTimer = utils.GetData(player).PickupRemoveTimer or {}
+						utils.GetData(player).PickupRemoveTimer[pickup] = Game():GetFrameCount() + delayGrabbingFrames
 					end
 					
 				end
@@ -899,8 +900,8 @@ function utils.CollectNearPickups(source, position, radius, knockback, delayGrab
 	end
 end
 
--- Pushes near pickups bomb entities
-function utils.PushNearBombs(source, position, radius, knockback)
+-- Pushes near pickups bomb entities and others
+function utils.PushNearOthers(source, position, radius, knockback)
 	for _, entity in pairs(Isaac.FindByType(EntityType.ENTITY_BOMB)) do
 		local bomb = entity:ToBomb()
 		
@@ -908,42 +909,44 @@ function utils.PushNearBombs(source, position, radius, knockback)
 			utils.ApplyKnockback(source, bomb, knockback)
 		end
 	end
-	-- Ahora también buscamos bombas troll específicamente
-	--[[
-    for _, trollBomb in pairs(Isaac.FindInRadius(position, radius, EntityPartition.ENEMY)) do
-        if trollBomb.Type == EntityType.ENTITY_BOMB and trollBomb.Variant == BombVariant.BOMB_TROLL and position:Distance(trollBomb.Position) <= radius then
-            utils.ApplyKnockback(source, trollBomb, knockback)
-        end
-    end
-	]]--
+	for _, entity in pairs(Isaac.FindByType(EntityType.ENTITY_TEAR)) do
+		local tear = entity:ToTear()
+		
+		if tear and position:Distance(tear.Position) <= radius then
+			if tear.Variant == TearVariant.EYE then
+				utils.ApplyKnockback(source, tear, knockback)
+				SFXManager():Play(SoundEffect.SOUND_CLAP)
+			end
+		end
+	end
 end
 
 function utils.GetAnimationName(player, weaponSprite)
-	local pData = player:GetData()
+	local pData = utils.GetData(player)
 	local animName = ""
 	--[[
 	if string.find(weaponSprite:GetAnimation(), "Idle") then
-		if pData.Yami.IsFullCharge then
+		if pData.IsFullCharge then
 			animName = "Long1"
 		else
 			animName = "Swing1"
 		end
 	elseif string.find(weaponSprite:GetAnimation(), "Swing2") or string.find(weaponSprite:GetAnimation(), "Long2") then
-		if pData.Yami.IsFullCharge then
+		if pData.IsFullCharge then
 			animName = "Long1"
 		else
 			animName = "Swing1"
 		end
 	elseif string.find(weaponSprite:GetAnimation(), "Swing1") or string.find(weaponSprite:GetAnimation(), "Long1") then
-		if pData.Yami.IsFullCharge then
+		if pData.IsFullCharge then
 			animName = "Long2"
 		else
 			animName = "Swing2"
 		end
 	end
 	]]--
-	if pData.Yami.CurrentEye == utils.Eyes.RIGHT then
-		if pData.Yami.IsFullCharge then
+	if pData.CurrentEye == utils.Eyes.RIGHT then
+		if pData.IsFullCharge then
 			animName = "Long1"
 		else
 			if player:HasCollectible(CollectibleType.COLLECTIBLE_PUPULA_DUPLEX) then
@@ -952,8 +955,8 @@ function utils.GetAnimationName(player, weaponSprite)
 				animName = "Swing1"
 			end
 		end
-	elseif pData.Yami.CurrentEye == utils.Eyes.LEFT then
-		if pData.Yami.IsFullCharge then
+	elseif pData.CurrentEye == utils.Eyes.LEFT then
+		if pData.IsFullCharge then
 			animName = "Long2"
 		else
 			if player:HasCollectible(CollectibleType.COLLECTIBLE_PUPULA_DUPLEX) then
@@ -970,11 +973,11 @@ function utils.GetAnimationName(player, weaponSprite)
 end
 
 function utils.FireTearFromEnemy(player, enemy, tearParams, tearVariant, ignoreTime)
-	local pData = player:GetData()
+	local pData = utils.GetData(player)
 	local tearSpawnedVel = player:GetLastDirection():Resized(utils.GetShotSpeed(player))
 	if ignoreTime >= 0 then
-		local rand = (utils.RandomRange(pData.Yami.RNG, 0.0, 1.0) * 180.0) - 90.0
-		if pData.Yami.CurrentEye == utils.Eyes.LEFT then
+		local rand = (utils.RandomRange(pData.RNG, 0.0, 1.0) * 180.0) - 90.0
+		if pData.CurrentEye == utils.Eyes.LEFT then
 			tearSpawnedVel = utils.RotateVector(tearSpawnedVel, -90 + rand)
 		else 
 			tearSpawnedVel = utils.RotateVector(tearSpawnedVel, 90 + rand)
@@ -984,7 +987,6 @@ function utils.FireTearFromEnemy(player, enemy, tearParams, tearVariant, ignoreT
 	local tearSpawned = player:FireTear(enemy.Position, tearSpawnedVel, false, false, false, player)
 	tearSpawned.Variant = tearVariant
 
-	if not tearSpawned:GetData().Yami then tearSpawned:GetData().Yami = {} end
 	--print("TEAR SPAWNED!")
 	utils.SetAllTearFlag(player, tearSpawned, tearParams)
 	tearSpawned.CollisionDamage = tearParams.TearDamage
@@ -992,8 +994,8 @@ function utils.FireTearFromEnemy(player, enemy, tearParams, tearVariant, ignoreT
 	tearSpawned.Color = tearParams.TearColor
 	tearSpawned.Height = tearParams.TearHeight -- Maybe it's not interesting
 	if ignoreTime >= 0 then
-		tearSpawned:GetData().Yami.IgnoreCollisionWith = {GetPtrHash(enemy)}
-		tearSpawned:GetData().Yami.IgnoreCollisionWithTime = ignoreTime
+		utils.GetData(tearSpawned).IgnoreCollisionWith = {GetPtrHash(enemy)}
+		utils.GetData(tearSpawned).IgnoreCollisionWithTime = ignoreTime
 	end
 	--tearSpawned:AddVelocity(player:GetTearMovementInheritance(tearSpawned.Velocity - player.Velocity))
 	--tearSpawned:SetTimeout(30)
@@ -1002,18 +1004,18 @@ function utils.FireTearFromEnemy(player, enemy, tearParams, tearVariant, ignoreT
 end
 
 function utils.AdjustProbabilities(player, tearParams)
-	local pData = player:GetData()
+	local pData = utils.GetData(player)
 	utils.SetAllTearFlag(player, tearParams, tearParams)
 	--The vanilla prob is 25% at 13 luck max, as it is random direction it would be better to be improved
 	if player:HasCollectible(CollectibleType.COLLECTIBLE_EUTHANASIA) then
-		local rand = utils.RandomRange(pData.Yami.RNG, 0.0, 1.0) 
+		local rand = utils.RandomRange(pData.RNG, 0.0, 1.0) 
 		local prob = math.max(0.0333, math.min(0.25, player.Luck / 13.0))
 		if rand <= prob then
 			utils.SetTearFlag(tearParams, TearFlags.TEAR_NEEDLE)
 		end
 	end
 	if player:HasCollectible(CollectibleType.COLLECTIBLE_GLAUCOMA) then
-		local rand = utils.RandomRange(pData.Yami.RNG, 0.0, 1.0) 
+		local rand = utils.RandomRange(pData.RNG, 0.0, 1.0) 
 		local prob = 0.05
 		if rand <= prob then
 			utils.SetTearFlag(tearParams, TearFlags.TEAR_CONFUSION)
@@ -1024,29 +1026,30 @@ end
 function utils.CharmNearEnemies(source, position, radius)
 	local player = source.Parent:ToPlayer()
 	if player then 
-		local pData = player:GetData()
+		local pData = utils.GetData(player)
 		for _, enemy in pairs(Isaac.FindInRadius(position, radius, EntityPartition.ENEMY)) do
 			if enemy and utils.IsActiveVulnerableEnemy(enemy) then
-				local eData = enemy:GetData()
-				if not eData.Yami then eData.Yami = {} end
-				if not eData.Yami.FriendlyHealth then
-					eData.Yami.FriendlyHealth = enemy.HitPoints
+				local eData = utils.GetData(enemy)
+				if not eData then eData = {} end
+				if not eData.FriendlyHealth then
+					eData.FriendlyHealth = enemy.HitPoints
 				end
 				if not enemy:HasEntityFlags(EntityFlag.FLAG_FRIENDLY) then
-					if eData.Yami.FriendlyHealth <= 0.0 then
+					if eData.FriendlyHealth <= 0.0 then
 						enemy:AddCharmed(EntityRef(source), -1)
 						enemy:AddEntityFlags(EntityFlag.FLAG_FRIENDLY)
 						SFXManager():Play(SoundEffect.SOUND_POWERUP_SPEWER)
 					else
-						local currentDamage = utils.ApplyDamageBonus(player, 1.0, 1.5, 1.0) / math.max(0.5, pData.Yami.FriendlyDamageSpeed / player.ShotSpeed)
+						local currentDamage = utils.ApplyDamageBonus(player, 1.0, 1.5, 1.0) / math.max(0.5, pData.FriendlyDamageSpeed / player.ShotSpeed)
 						if enemy:IsBoss() then
 							local tearParams = player:GetTearHitParams(WeaponType.WEAPON_TEARS)
 							utils.AdjustProbabilities(player, tearParams)
 							utils.DamageSpecificEnemy(enemy, source, currentDamage, 0, 0, tearParams)
 						else
-							eData.Yami.FriendlyHealth = math.max(0.0, eData.Yami.FriendlyHealth - currentDamage)
+							eData.FriendlyHealth = math.max(0.0, eData.FriendlyHealth - currentDamage)
 						end
-						SFXManager():Play(SoundEffect.SOUND_GOOATTACH0)
+						--SFXManager():Play(SoundEffect.SOUND_GOOATTACH0)
+						SFXManager():Play(SoundEffect.SOUND_KISS_LIPS1)
 					end
 				end
 			end
@@ -1060,13 +1063,13 @@ function utils.DamageSpecificEnemy(enemy, source, damage, flag, countdown, tearP
 	local player = source.Parent:ToPlayer()
 
 	if player then 
-		local pData = player:GetData()
+		local pData = utils.GetData(player)
 
 		local spawnedTear = false
 
 		if player:HasCollectible(CollectibleType.COLLECTIBLE_GODS_FLESH) then
 			--print("Called correctly B")
-			local rand = utils.RandomRange(pData.Yami.RNG, 0.0, 1.0)
+			local rand = utils.RandomRange(pData.RNG, 0.0, 1.0)
 			--print("Called correctly C")
 			if rand <= 0.1 then
 				--print("Called correctly D")
@@ -1122,6 +1125,10 @@ function utils.DamageSpecificEnemy(enemy, source, damage, flag, countdown, tearP
 			utils.FireTearFromEnemy(player, enemy, tearParams, TearVariant.BOOGER, 0)
 			spawnedTear = true
 		end
+		if utils.HasTearFlag(tearParams, TearFlags.TEAR_EGG) then
+			utils.FireTearFromEnemy(player, enemy, tearParams, TearVariant.EGG, 0)
+			spawnedTear = true
+		end
 		if utils.HasTearFlag(tearParams, TearFlags.TEAR_HORN) then
 			utils.FireTearFromEnemy(player, enemy, tearParams, tearParams.TearVariant, 0)
 			spawnedTear = true
@@ -1136,8 +1143,24 @@ function utils.DamageSpecificEnemy(enemy, source, damage, flag, countdown, tearP
 			SFXManager():Play(SoundEffect.SOUND_PORTAL_SPAWN)
 		end
 
+		if utils.IsTearVariant(tearParams, TearVariant.FIST) then
+			local npcEnemy = enemy:ToNPC()
+			if npcEnemy and not npcEnemy:IsBoss() then
+				npcEnemy:ResetPathFinderTarget()
+				enemy:AddConfusion(EntityRef(source), 60, false)
+				enemy:AddEntityFlags(EntityFlag.FLAG_THROWN | EntityFlag.FLAG_APPLY_IMPACT_DAMAGE)
+				utils.ApplyKnockback(player, enemy, pData.PunchKnockback)
+				SFXManager():Play(SoundEffect.SOUND_PUNCH)
+				--utils.FireTearFromEnemy(player, enemy, tearParams,TearVariant.NEEDLE, ownCollisionIgnoreTime)
+				--spawnedTear = true
+			end
+		end
 		if utils.IsTearVariant(tearParams, TearVariant.NEEDLE) then
 			utils.FireTearFromEnemy(player, enemy, tearParams,TearVariant.NEEDLE, ownCollisionIgnoreTime)
+			spawnedTear = true
+		end
+		if utils.IsTearVariant(tearParams, TearVariant.RAZOR) then
+			utils.FireTearFromEnemy(player, enemy, tearParams,TearVariant.RAZOR, ownCollisionIgnoreTime)
 			spawnedTear = true
 		end
 		if utils.IsTearVariant(tearParams, TearVariant.BONE) then
@@ -1163,8 +1186,8 @@ function utils.DamageSpecificEnemy(enemy, source, damage, flag, countdown, tearP
 			spawnedTear = true
 		end
 
-		local randTear = utils.RandomRange(pData.Yami.RNG, 0.0, 1.0)
-		local probTear = math.max(pData.Yami.DefaultTearProbability, math.min(pData.Yami.MaxTearProbability, player.Luck / 10.0))
+		local randTear = utils.RandomRange(pData.RNG, 0.0, 1.0)
+		local probTear = math.max(pData.DefaultTearProbability, math.min(pData.MaxTearProbability, player.Luck / 10.0))
 		if not spawnedTear and randTear <= probTear then
 			utils.FireTearFromEnemy(player, enemy, tearParams, tearParams.TearVariant, 0)
 			spawnedTear = true
@@ -1184,7 +1207,7 @@ function utils.DamageNearEnemies(source, position, radius, damage, flag, countdo
 	local player = source.Parent:ToPlayer()
 
 	if player then 
-		local pData = player:GetData()
+		local pData = utils.GetData(player)
 		local tearParams = player:GetTearHitParams(WeaponType.WEAPON_TEARS)
 		utils.AdjustProbabilities(player, tearParams)
 		local enemiesHit = 0
@@ -1200,15 +1223,15 @@ function utils.DamageNearEnemies(source, position, radius, damage, flag, countdo
 
 		if player:HasCollectible(CollectibleType.COLLECTIBLE_DEAD_EYE) then
 			if enemiesHit > 0 then
-				pData.Yami.UnsuccesfulEnemyHit = 0
-				pData.Yami.SuccesfulEnemyHit = pData.Yami.SuccesfulEnemyHit + 1
+				pData.UnsuccesfulEnemyHit = 0
+				pData.SuccesfulEnemyHit = pData.SuccesfulEnemyHit + 1
 			else
-				pData.Yami.UnsuccesfulEnemyHit = pData.Yami.UnsuccesfulEnemyHit + 1
-				local rand = utils.RandomRange(pData.Yami.RNG, 0.0, 1.0) 
-				if (pData.Yami.UnsuccesfulEnemyHit <= 1 and rand <= 0.2) or
-				   (pData.Yami.UnsuccesfulEnemyHit == 2 and rand <= 0.33) or
-				   (pData.Yami.UnsuccesfulEnemyHit >= 3 and rand <= 0.5) then
-					pData.Yami.SuccesfulEnemyHit = 0
+				pData.UnsuccesfulEnemyHit = pData.UnsuccesfulEnemyHit + 1
+				local rand = utils.RandomRange(pData.RNG, 0.0, 1.0) 
+				if (pData.UnsuccesfulEnemyHit <= 1 and rand <= 0.2) or
+				   (pData.UnsuccesfulEnemyHit == 2 and rand <= 0.33) or
+				   (pData.UnsuccesfulEnemyHit >= 3 and rand <= 0.5) then
+					pData.SuccesfulEnemyHit = 0
 				end
 			end
 		end
@@ -1408,23 +1431,22 @@ utils.Yami_ChargeBar = setmetatable({
 -- En el bucle de actualización, asegúrate de eliminar el pickup cuando sea el momento
 function utils.OnUpdate(player)
 	if player then
-		local data = player:GetData()
-		if data.Yami.PickupRemoveTimer then
-			for pickup, frame in pairs(data.Yami.PickupRemoveTimer) do
-				if not pickup:GetData().Yami then pickup:GetData().Yami = {} end
-				if Game():GetFrameCount() >= frame and not pickup:GetData().Yami.PostGotWhip then
-					if not pickup:GetData().Yami.PreGotWhipNotWait then
+		local data = utils.GetData(player)
+		if data.PickupRemoveTimer then
+			for pickup, frame in pairs(data.PickupRemoveTimer) do
+				if Game():GetFrameCount() >= frame and not utils.GetData(pickup).PostGotWhip then
+					if not utils.GetData(pickup).PreGotWhipNotWait then
 						utils.GetItem(player, pickup)
 						pickup:PlayPickupSound()
 						pickup:Remove()
 					else
-						pickup:GetData().Yami.PreGotWhip = false
-						pickup:GetData().Yami.PostGotWhip = false
-						pickup:GetData().Yami.PreGotWhipNotWait = false
+						utils.GetData(pickup).PreGotWhip = false
+						utils.GetData(pickup).PostGotWhip = false
+						utils.GetData(pickup).PreGotWhipNotWait = false
 						utils.ApplyPullback(player, pickup, 30.0)
 					end
-					data.Yami.PickupRemoveTimer[pickup] = nil  -- Eliminar el timer después de usarlo
-				elseif pickup:GetData().Yami.PreGotWhipNotWait then
+					data.PickupRemoveTimer[pickup] = nil  -- Eliminar el timer después de usarlo
+				elseif utils.GetData(pickup).PreGotWhipNotWait then
 					--utils.ApplyPullback(player, pickup, 20.0)
 				end
 			end
