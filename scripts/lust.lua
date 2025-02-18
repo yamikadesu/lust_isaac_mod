@@ -1,6 +1,6 @@
 local mod = RegisterMod("Lust (YamikaDesu)", 1) 
 
-local version = "1.9"
+local version = "1.9.3"
 local debugString = mod.Name .. " V" .. version .. " loaded successfully"
 print(debugString)
 
@@ -771,7 +771,11 @@ function Lust:PostUpdateMelee(player, lastFireDirection, effectPosAlt)
             local chargingKnife = pData.ChargingValue
             if utils.IsDirectionalShooting(player) then
                 local markedTargetPos = utils.GetMarkedPos(player)
-                chargingKnife = math.max(0.0, math.min(1.0, player.Position:Distance(markedTargetPos) / 100.0))
+                if markedTargetPos then
+                    chargingKnife = math.max(0.0, math.min(1.0, player.Position:Distance(markedTargetPos) / 100.0))
+                else 
+                    chargingKnife = 1
+                end
             end
             pData.MomKnifeItem:Shoot(chargingKnife, utils.GetMeleeSize(player)+100)
             --end
