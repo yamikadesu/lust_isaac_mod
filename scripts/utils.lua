@@ -293,7 +293,13 @@ function utils.GetWeaponType(player)
 	return WeaponType.WEAPON_TEARS
 end
 
-function utils.IsUsingWeapon(player, weaponType)
+function utils.IsUsingWeapon(player, weaponType, force)
+	force = force or false
+	if player:HasWeaponType(weaponType) then
+		return true
+	elseif force then
+		return false
+	end
 	if weaponType == WeaponType.WEAPON_BRIMSTONE
 		and player:HasCollectible(CollectibleType.COLLECTIBLE_BRIMSTONE) then
 		return true
@@ -539,6 +545,10 @@ end
 -- Checks if an enemy can be damaged
 function utils.IsActiveVulnerableEnemy(entity)
 	return utils.IsRealEnemy(entity) and entity:IsActiveEnemy() and entity:IsVulnerableEnemy()
+end
+
+function utils.GetDirectionFromSource(source, entity)
+	return (entity.Position - source.Position):Normalized()
 end
 
 -- Knock backs the wanted entity from the source
@@ -972,6 +982,35 @@ function utils.GetAnimationName(player, weaponSprite)
 	return animName
 end
 
+function utils.FireTearFromPosition(player, position, tearParams, tearVariant)
+	local pData = utils.GetData(player)
+	local tearSpawnedVel = utils.DirectionToVector[player:GetHeadDirection()]:Resized(utils.GetShotSpeed(player))
+
+	local tearSpawned = player:FireTear(position, tearSpawnedVel, false, false, false, player)
+	tearSpawned.Variant = tearVariant
+
+	utils.SetAllTearFlag(player, tearSpawned, tearParams)
+	tearSpawned.CollisionDamage = tearParams.TearDamage
+	tearSpawned.Size = tearParams.TearScale
+	tearSpawned.Color = tearParams.TearColor
+	tearSpawned.Height = tearParams.TearHeight -- Maybe it's not interesting
+end
+
+function utils.FireTearFromHead(player, tearParams, tearVariant)
+	local pData = utils.GetData(player)
+	local tearSpawnedVel = utils.DirectionToVector[player:GetHeadDirection()]:Resized(utils.GetShotSpeed(player))
+
+	local tearPos = player.Position + player.TearsOffset + Vector(0, player.TearHeight) 
+	local tearSpawned = player:FireTear(tearPos, tearSpawnedVel, false, false, false, player)
+	tearSpawned.Variant = tearVariant
+
+	utils.SetAllTearFlag(player, tearSpawned, tearParams)
+	tearSpawned.CollisionDamage = tearParams.TearDamage
+	tearSpawned.Size = tearParams.TearScale
+	tearSpawned.Color = tearParams.TearColor
+	tearSpawned.Height = tearParams.TearHeight -- Maybe it's not interesting
+end
+
 function utils.FireTearFromEnemy(player, enemy, tearParams, tearVariant, ignoreTime)
 	local pData = utils.GetData(player)
 	local tearSpawnedVel = player:GetLastDirection():Resized(utils.GetShotSpeed(player))
@@ -1123,6 +1162,10 @@ function utils.DamageSpecificEnemy(enemy, source, damage, flag, countdown, tearP
 		end
 		if utils.HasTearFlag(tearParams, TearFlags.TEAR_BOOGER) then
 			utils.FireTearFromEnemy(player, enemy, tearParams, TearVariant.BOOGER, 0)
+			spawnedTear = true
+		end
+		if utils.HasTearFlag(tearParams, TearFlags.TEAR_SPORE) then
+			utils.FireTearFromEnemy(player, enemy, tearParams, TearVariant.SPORE, 0)
 			spawnedTear = true
 		end
 		if utils.HasTearFlag(tearParams, TearFlags.TEAR_EGG) then

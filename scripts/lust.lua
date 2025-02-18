@@ -1,6 +1,6 @@
 local mod = RegisterMod("Lust (YamikaDesu)", 1) 
 
-local version = "1.8"
+local version = "1.9"
 local debugString = mod.Name .. " V" .. version .. " loaded successfully"
 print(debugString)
 
@@ -47,6 +47,8 @@ local meleeLaserSize = 5
 local directionalRotationSpeed = 20
 local directionalDamageReduction = 5
 local directionalSpeed = 2
+--local knifeLaunchSpeed = 0.02
+--local scissorsMaxAttacks = 5
 
 local Lust = { 
     DAMAGE = 0, -- These are all relative to Isaac's Lust stats.
@@ -58,11 +60,11 @@ local Lust = {
     LUCK = 0,
     FLYING = true,                                  
     TEARFLAG = 0, -- 0 is default
-    TEARCOLOR = Color(1.0, 0.2, 0.6, 1.0, 0, 0, 0)  -- Color(1.0, 1.0, 1.0, 1.0, 0, 0, 0) is default
+    TEARCOLOR = Color(0.1, 0.75, 1.0, 1.0, 0, 0, 0)  -- Color(1.0, 1.0, 1.0, 1.0, 0, 0, 0) is default
 }
 
 -- Se ejecuta cuando el jugador está en caché
-function Lust:OnCache(player, cacheFlag) -- I do mean everywhere!
+function Lust:OnCache(player, cacheFlag)
     --if player:GetName() == "Lust" then -- Especially here!
     if player:GetPlayerType() == playerType then -- Especially here!
         if cacheFlag == CacheFlag.CACHE_DAMAGE then
@@ -91,6 +93,13 @@ function Lust:OnCache(player, cacheFlag) -- I do mean everywhere!
         if cacheFlag == CacheFlag.CACHE_TEARCOLOR then
             player.TearColor = Lust.TEARCOLOR
         end
+    end
+end
+
+function Lust:RemoveCollectiblesRoom(player) 
+    if player:GetPlayerType() == playerType then
+        local pData = utils.GetData(player)
+        --pData.IsScissorsEnabled = false
     end
 end
 
@@ -136,6 +145,7 @@ function Lust:InitPlayer(player)
         pData.HadDirectionalMovement = false
         pData.IsInNewRoom = true
         pData.MomKnifeItem = nil
+        pData.SpiritSwordItem = nil
         pData.IsKnockBacked = false
         pData.IsCrownDamaged = false
         pData.CurrentEye = utils.Eyes.LEFT -- It will start with Right
@@ -161,7 +171,12 @@ function Lust:InitPlayer(player)
         pData.FriendlyDamageDelayTemp = 0
         pData.MeleeLastFireDirection = Vector(0,0)
         pData.PunchKnockback = 25
+        --pData.IsKnifeMoving = false
+        --pData.InitKnifePosition = Vector.Zero
+        --pData.TargetKnifePosition = Vector.Zero
+        --pData.KnifeLerpPosition = 0
         Lust:RemoveDataEffects(player)
+        Lust:RemoveCollectiblesRoom(player)
     end
 end
 
@@ -204,34 +219,144 @@ function Lust:UpdateWeapon(player)
             pData.MeleeWeapon:Remove()
             pData.MeleeWeapon = nil
         end
-        if player:HasCollectible(CollectibleType.COLLECTIBLE_MOMS_KNIFE) then
-            local knifeDirection = utils.DirectionToVectorReversed[player:GetHeadDirection()]
+        if utils.IsUsingWeapon(player, WeaponType.WEAPON_KNIFE, true) then
             if not pData.MomKnifeItem then
                 pData.MomKnifeItem = Isaac.Spawn(EntityType.ENTITY_KNIFE, 0, 0, player.Position, Vector.Zero, player):ToKnife()
                 pData.MomKnifeItem:AddEntityFlags(EntityFlag.FLAG_DONT_OVERWRITE | EntityFlag.FLAG_PERSISTENT)
                 --pData.MomKnifeItem:AddTearFlags(TearFlags.TEAR_PERSISTENT)
                 pData.MomKnifeItem.Parent = player
                 --pData.MomKnifeItem:SetDamageSource(EntityType.ENTITY_PLAYER)
-                pData.MomKnifeItem.CollisionDamage = player.Damage
                 pData.MomKnifeItem.Position = player.Position + Vector(0, meleeOffset)
                 --pData.MomKnifeItem:Update()
             end
             if pData.MomKnifeItem then
-                local meleeSprite = pData.MomKnifeItem:GetSprite()
-                pData.MomKnifeItem.Position = utils.Lerp(pData.MomKnifeItem.Position, player.Position + knifeDirection:Resized(meleeOffset), 0.4)
-                pData.MomKnifeItem.Rotation = utils.LerpAngle(utils.Round(pData.MomKnifeItem.Rotation, 3), knifeDirection:GetAngleDegrees(), 0.4)
-                --print(knifeDirection:GetAngleDegrees())
-                --pData.MomKnifeItem.Position = player.Position + knifeDirection:Resized(meleeOffset)
-                --pData.MomKnifeItem.SpriteRotation = knifeDirection:GetAngleDegrees()
-                --pData.MomKnifeItem.SpriteOffset = knifeDirection:Resized(meleeOffset)
-                pData.MomKnifeItem.SpriteScale = utils.GetMeleeSize(player) * Vector.One
-                pData.MomKnifeItem:SetSize(utils.GetMeleeSize(player) * meleeSize, pData.MomKnifeItem.SizeMulti, 0)
-                meleeSprite:LoadGraphics()
+                if not pData.MomKnifeItem:IsFlying() or utils.IsDirectionalShooting(player) then
+                    --local knifeDirection = utils.DirectionToVectorReversed[player:GetHeadDirection()]
+                    local lastKnifeDirection = pData.MeleeLastFireDirection
+                    if utils.IsDirectionalShooting(player) then
+                        lastKnifeDirection = player:GetAimDirection()
+                    end
+
+                    local knifeDirection = utils.RotateVector(lastKnifeDirection, 180.0)
+                    pData.MomKnifeItem.Position = utils.Lerp(pData.MomKnifeItem.Position, player.Position + knifeDirection:Resized(meleeOffset), 0.4)
+                    pData.MomKnifeItem.Rotation = utils.LerpAngle(utils.Round(pData.MomKnifeItem.Rotation, 3), knifeDirection:GetAngleDegrees(), 0.4)
+                    pData.MomKnifeItem.Velocity = Vector.Zero
+                    pData.MomKnifeItem.CollisionDamage = player.Damage
+                    --print(knifeDirection:GetAngleDegrees())
+                    --pData.MomKnifeItem.Position = player.Position + knifeDirection:Resized(meleeOffset)
+                    --pData.MomKnifeItem.SpriteRotation = knifeDirection:GetAngleDegrees()
+                    --pData.MomKnifeItem.SpriteOffset = knifeDirection:Resized(meleeOffset)
+                    pData.MomKnifeItem.SpriteScale = utils.GetMeleeSize(player) * Vector.One
+                    pData.MomKnifeItem:SetSize(utils.GetMeleeSize(player) * meleeSize, pData.MomKnifeItem.SizeMulti, 0)
+                end
+                local knifeSprite = pData.MomKnifeItem:GetSprite()
+                knifeSprite:LoadGraphics()
             end
         else
             if pData.MomKnifeItem then
                 pData.MomKnifeItem:Remove()
                 pData.MomKnifeItem = nil
+            end
+        end
+        if utils.IsUsingWeapon(player, WeaponType.WEAPON_SPIRIT_SWORD) then
+            if not pData.SpiritSwordItem and not utils.IsDirectionalShooting(player) then
+                local swordVariant = 10
+                if utils.IsUsingWeapon(player, WeaponType.WEAPON_TECH_X) or utils.IsUsingWeapon(player, WeaponType.WEAPON_LASER) then
+                    swordVariant = 11
+                end
+                pData.SpiritSwordItem = player:FireKnife(player, 0, false, 0, swordVariant)
+                --pData.SpiritSwordItem.RotationOffset = 0.0
+                local swordAnimName = "Attack"
+                if pData.CurrentEye == utils.Eyes.RIGHT then
+                    swordAnimName = swordAnimName .. "Right"
+                else
+                    swordAnimName = swordAnimName .. "Left"
+                end
+                pData.SpiritSwordItem:GetSprite():SetFrame(swordAnimName, 0)
+
+                pData.SpiritSwordItem:AddEntityFlags(EntityFlag.FLAG_DONT_OVERWRITE | EntityFlag.FLAG_PERSISTENT)
+                pData.SpiritSwordItem.Color = Lust.TEARCOLOR
+                pData.SpiritSwordItem.Parent = player
+                --pData.SpiritSwordItem:SetDamageSource(EntityType.ENTITY_PLAYER)
+                local knifeDirection = utils.DirectionToVector[player:GetHeadDirection()]
+                pData.SpiritSwordItem.Position = player.Position + knifeDirection:Resized(meleeOffset)
+                --pData.SpiritSwordItem:Update()
+            end
+            if pData.SpiritSwordItem then
+                if not utils.IsUsingWeapon(player, WeaponType.WEAPON_KNIFE) or not pData.SpiritSwordItem:IsFlying() then
+                    if not utils.IsDirectionalShooting(player) then
+                        local knifeDirection = utils.DirectionToVector[player:GetHeadDirection()]
+                        if pData.SpiritSwordItem:GetSprite():WasEventTriggered("SwingEnd") and pData.SpiritSwordItem:GetSprite():IsFinished() then
+                            local currentSwordAnimName = pData.SpiritSwordItem:GetSprite():GetAnimation()
+                            if string.find(currentSwordAnimName, "Spin") then
+                                local swordAnimName = "Attack"
+                                if pData.CurrentEye == utils.Eyes.RIGHT then
+                                    swordAnimName = swordAnimName .. "Right"
+                                else
+                                    swordAnimName = swordAnimName .. "Left"
+                                end
+                                pData.SpiritSwordItem:GetSprite():SetFrame(swordAnimName, 0)
+                            end
+                            pData.SpiritSwordItem.Position = player.Position + knifeDirection:Resized(meleeOffset)
+                            pData.SpiritSwordItem.RotationOffset = 0.0
+                        end
+                        --if pData.SpiritSwordItem:GetSprite():WasEventTriggered("SwingEnd") and pData.SpiritSwordItem:GetSprite():IsFinished() then
+                        --[[if pData.SpiritSwordItem:GetSprite():IsEventTriggered("SwingEnd") then
+                            local currentSwordAnimName = pData.SpiritSwordItem:GetSprite()
+                            local currentSwordSize = pData.SpiritSwordItem.Size + 70
+                            --print(currentSwordAnimName:GetAnimation())
+                            if string.find(currentSwordAnimName:GetAnimation(), "Attack") then
+                                if meleeCanCollect and not player:IsCoopGhost() then
+                                    --print("Collect items!")
+                                    utils.CollectNearPickups(player, pData.SpiritSwordItem.Position, currentSwordSize, meleeKnockback, meleeDelayGrabbingFrames)
+                                else
+                                    utils.PushNearPickups(player, pData.SpiritSwordItem.Position, currentSwordSize, meleeKnockback)
+                                end
+                                
+                                --print("Damage enemies!!")
+                                utils.PushNearOthers(player, pData.SpiritSwordItem.Position, currentSwordSize, meleeKnockback)
+                                utils.DamageNearEnemies(pData.SpiritSwordItem, pData.SpiritSwordItem.Position, currentSwordSize, pData.SpiritSwordItem.CollisionDamage)
+                                utils.DestroyNearGrid(pData.SpiritSwordItem, pData.SpiritSwordItem.Position, currentSwordSize)
+                                
+                            elseif string.find(currentSwordAnimName:GetAnimation(), "Spin") then
+                                --print("Done Spin!")
+                                utils.PushNearPickups(player, pData.SpiritSwordItem.Position, currentSwordSize, meleeKnockback)
+                                utils.PushNearOthers(player, pData.SpiritSwordItem.Position, currentSwordSize, meleeKnockback)
+                                utils.DamageNearEnemies(pData.SpiritSwordItem, pData.SpiritSwordItem.Position, currentSwordSize, pData.SpiritSwordItem.CollisionDamage)
+                                utils.DestroyNearGrid(pData.SpiritSwordItem, pData.SpiritSwordItem.Position, currentSwordSize)
+                            end
+                        end]]--
+                        --if pData.SpiritSwordItem:GetSprite():IsPlaying() then
+                        pData.SpiritSwordItem.Position = utils.Lerp(pData.SpiritSwordItem.Position, player.Position + knifeDirection:Resized(meleeOffset), 0.4)
+                        pData.SpiritSwordItem.Rotation = utils.LerpAngle(utils.Round(pData.SpiritSwordItem.Rotation, 3), knifeDirection:GetAngleDegrees(), 0.4)
+                    else
+                        local markedTargetPos = utils.GetMarkedPos(player)
+                        if markedTargetPos then
+                            pData.SpiritSwordItem.Position = markedTargetPos
+                        else 
+                            if not pData.HadDirectionalMovement or pData.IsNewRoom then
+                                pData.SpiritSwordItem.Position = player.Position
+                            else
+                                pData.SpiritSwordItem.Position = pData.SpiritSwordItem.Position + player:GetAimDirection():Resized(utils.GetShotSpeed(player)*directionalSpeed)
+                            end
+                        end
+                        --pData.SpiritSwordItem.IsFollowing = false
+                        pData.SpiritSwordItem.DepthOffset = 2
+                        pData.SpiritSwordItem.SpriteOffset = Vector(0, 0)
+                    end
+                    pData.SpiritSwordItem.CollisionDamage = player.Damage
+                    pData.SpiritSwordItem.EntityCollisionClass = EntityCollisionClass.ENTCOLL_ALL
+
+                    pData.SpiritSwordItem.SpriteScale = utils.GetMeleeSize(player) * Vector.One
+                    pData.SpiritSwordItem:SetSize(utils.GetMeleeSize(player) * meleeSize, pData.SpiritSwordItem.SizeMulti, 12)
+                end
+                --local knifeSprite = pData.SpiritSwordItem:GetSprite()
+                --knifeSprite:LoadGraphics()
+            end
+        else
+            if pData.SpiritSwordItem then
+                pData.SpiritSwordItem:Remove()
+                pData.SpiritSwordItem = nil
             end
         end
     
@@ -242,6 +367,7 @@ function Lust:UpdateWeapon(player)
             local meleeDirection = (meleeHitbox and meleeHitbox:Exists()) 
                                 and (meleeHitbox.Position - player.Position) 
                                 or utils.DirectionToVector[player:GetHeadDirection()] 
+            melee.Velocity = Vector.Zero
             if utils.IsDirectionalShooting(player) then
                 local markedTargetPos = utils.GetMarkedPos(player)
                 if markedTargetPos then
@@ -293,17 +419,13 @@ function Lust:UpdateEffect(effect)
             local pData = utils.GetData(player)
             if effect.Variant == weaponAttack or effect.Variant == weapon then
                 if utils.IsDirectionalShooting(player) and effect.Variant == weapon then
-                    --if meleeCanCollect and not player:IsCoopGhost() then
-                    --    utils.CollectNearPickups(player, effect.Position, effect.Size, meleeKnockback, meleeDelayGrabbingFrames, 6)
-                    --else
                     utils.PushNearPickups(player, effect.Position, effect.Size, meleeKnockback)
-                    --end
                     utils.PushNearOthers(player, effect.Position, effect.Size, meleeKnockback)
                     utils.DamageNearEnemies(effect, effect.Position, effect.Size, effect.CollisionDamage)
                     utils.DestroyNearGrid(effect, effect.Position, effect.Size)
                     effect.EntityCollisionClass = EntityCollisionClass.ENTCOLL_ALL
                 elseif not utils.IsDirectionalShooting(player) and effect.Variant == weaponAttack then
-                    if effect.Timeout <= math.ceil(meleeTimeout * meleeWarmupMult) and effect.Timeout == 6 then -- Small delay before actual  hittin'
+                    if effect.Timeout <= math.ceil(meleeTimeout * meleeWarmupMult) and effect.Timeout == 6 then --Small delay before actual  hittin'
                         if meleeCanCollect and not player:IsCoopGhost() then
                             utils.CollectNearPickups(player, effect.Position, effect.Size, meleeKnockback, meleeDelayGrabbingFrames)
                         else
@@ -459,19 +581,23 @@ function Lust:PostUpdateMelee(player, lastFireDirection, effectPosAlt)
                 hasLaunchedFire = true
             end
             if pData.SpawnedFireDirectional then
-                pData.SpawnedFireDirectional.Position = effectPosAlt
-                pData.SpawnedFireDirectional.Velocity = Vector.Zero
                 if pData.SpawnedFireDirectional:IsDead() then
                     pData.SpawnedFireDirectional:Remove()
                     pData.SpawnedFireDirectional = nil
+                else
+                    pData.SpawnedFireDirectional.Position = effectPosAlt
+                    pData.SpawnedFireDirectional.Velocity = Vector.Zero
                 end
             end
         end
         if player:HasCollectible(CollectibleType.COLLECTIBLE_BIRDS_EYE) and not hasLaunchedFire then
             local rand = utils.RandomRange(rng, 0.0, 1.0)
+            --print("Has Birds Eye")
             if rand <= prob then
                 if utils.IsDirectionalShooting(player) then
+                    --print("Is Directional")
                     if not pData.SpawnedFireDirectional then
+                        --print("Spawn Fire Directional")
                         --print("SPAWNED RED FIRE!")
                         pData.SpawnedFireDirectional = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.RED_CANDLE_FLAME, 0, effectPos, Vector.Zero, player):ToEffect()
                         pData.SpawnedFireDirectional.CollisionDamage = player.Damage * 3.0
@@ -490,12 +616,15 @@ function Lust:PostUpdateMelee(player, lastFireDirection, effectPosAlt)
                 end
                 hasLaunchedFire = true
             end
+            --print("Other")
             if pData.SpawnedFireDirectional then
-                pData.SpawnedFireDirectional.Position = effectPosAlt
-                pData.SpawnedFireDirectional.Velocity = Vector.Zero
+                --print("SpawnedFireDirectional")
                 if pData.SpawnedFireDirectional:IsDead() then
                     pData.SpawnedFireDirectional:Remove()
                     pData.SpawnedFireDirectional = nil
+                else
+                    pData.SpawnedFireDirectional.Position = effectPosAlt
+                    pData.SpawnedFireDirectional.Velocity = Vector.Zero
                 end
             end
         end
@@ -543,29 +672,128 @@ function Lust:PostUpdateMelee(player, lastFireDirection, effectPosAlt)
             tearSpawned:AddTearFlags(TearFlags.TEAR_HOMING | TearFlags.TEAR_PIERCING | TearFlags.TEAR_SPECTRAL)
             if utils.IsUsingWeapon(player, WeaponType.WEAPON_BRIMSTONE) then
                 --print("Added brimstone fetus!!")
-                tearSpawned.TearFlags = tearSpawned.TearFlags | TearFlags.TEAR_FETUS_BRIMSTONE
+                tearSpawned:AddTearFlags(TearFlags.TEAR_FETUS_BRIMSTONE)
             end
             if utils.IsUsingWeapon(player, WeaponType.WEAPON_SPIRIT_SWORD) then
-                tearSpawned.TearFlags = tearSpawned.TearFlags | TearFlags.TEAR_FETUS_SWORD
+                tearSpawned:AddTearFlags(TearFlags.TEAR_FETUS_SWORD)
             end
             if utils.IsUsingWeapon(player, WeaponType.WEAPON_KNIFE) then
-                tearSpawned.TearFlags = tearSpawned.TearFlags | earFlags.TEAR_FETUS_KNIFE
+                tearSpawned:AddTearFlags(earFlags.TEAR_FETUS_KNIFE)
             end
             if utils.IsUsingWeapon(player, WeaponType.WEAPON_TECH_X) then
-                tearSpawned.TearFlags = tearSpawned.TearFlags | TearFlags.TEAR_FETUS_TECHX
+                tearSpawned:AddTearFlags(TearFlags.TEAR_FETUS_TECHX)
             end
             if utils.IsUsingWeapon(player, WeaponType.WEAPON_LASER) then
-                tearSpawned.TearFlags = tearSpawned.TearFlags | TearFlags.TEAR_FETUS_TECH
+                tearSpawned:AddTearFlags(TearFlags.TEAR_FETUS_TECH)
             end
             if utils.IsUsingWeapon(player, WeaponType.WEAPON_BONE) then
-                tearSpawned.TearFlags = tearSpawned.TearFlags | TearFlags.TEAR_FETUS_BONE
+                tearSpawned:AddTearFlags(TearFlags.TEAR_FETUS_BONE)
             end
             if utils.IsUsingWeapon(player, WeaponType.WEAPON_BOMBS) then
-                tearSpawned.TearFlags = tearSpawned.TearFlags | TearFlags.TEAR_FETUS_BOMBER
+                tearSpawned:AddTearFlags(TearFlags.TEAR_FETUS_BOMBER)
             end
             tearSpawned.CollisionDamage = player.Damage
             --end
         end
+        if utils.IsUsingWeapon(player, WeaponType.WEAPON_SPIRIT_SWORD) then --Sin poner nada más se permite la cancelación de frames
+            local knifeDirection = utils.DirectionToVector[headDirection]
+
+            local swordAnimName = ""
+            if pData.ChargingValue >= 1 or utils.IsDirectionalShooting(player) then
+                swordAnimName = "Spin"
+            else
+                swordAnimName = "Attack"
+            end
+
+            local rotationOffset = knifeDirection:GetAngleDegrees()
+            if pData.CurrentEye == utils.Eyes.RIGHT or utils.IsDirectionalShooting(player) then
+                swordAnimName = swordAnimName .. "Left"
+            else
+                swordAnimName = swordAnimName .. "Right"
+                rotationOffset = rotationOffset - 90
+            end
+            local swordVariant = 10
+            if utils.IsUsingWeapon(player, WeaponType.WEAPON_TECH_X) or utils.IsUsingWeapon(player, WeaponType.WEAPON_LASER) then
+                swordVariant = 11
+            end
+            
+            if pData.SpiritSwordItem then
+                if not utils.IsDirectionalShooting(player) or pData.SpiritSwordItem:GetSprite():IsFinished() then
+                    pData.SpiritSwordItem:Remove()
+                    pData.SpiritSwordItem = nil
+                end
+            end
+            
+            if not pData.SpiritSwordItem or not utils.IsDirectionalShooting(player) then
+                pData.SpiritSwordItem = player:FireKnife(player, rotationOffset, false, 0, swordVariant)
+                pData.SpiritSwordItem.Position = player.Position + knifeDirection:Resized(meleeOffset)
+                pData.SpiritSwordItem:GetSprite():Play(swordAnimName, true)
+                if utils.IsUsingWeapon(player, WeaponType.WEAPON_KNIFE) and pData.ChargingValue > 0 then
+                    pData.SpiritSwordItem.RotationOffset = knifeDirection:GetAngleDegrees()
+                    pData.SpiritSwordItem:Shoot(pData.ChargingValue, utils.GetMeleeSize(player)+100)
+                end
+            end
+            --[[pData.SpiritSwordItem.Position = player.Position + knifeDirection:Resized(meleeOffset)
+            pData.SpiritSwordItem.Rotation = knifeDirection:GetAngleDegrees()
+            if pData.ChargingValue >= 1 then
+                swordAnimName = "Spin"
+            else
+                swordAnimName = "Attack"
+            end
+
+            if pData.CurrentEye == utils.Eyes.RIGHT then
+                swordAnimName = swordAnimName .. "Left"
+            else
+                swordAnimName = swordAnimName .. "Right"
+            end
+            pData.SpiritSwordItem:GetSprite():Play(swordAnimName, false)]]--
+        end
+        if pData.MomKnifeItem and not pData.MomKnifeItem:IsFlying() then --and not pData.IsKnifeMoving then
+            --pData.IsKnifeMoving = true
+
+            --local knifeDirection = utils.DirectionToVectorReversed[headDirection]
+            local lastKnifeDirection = lastFireDirection
+            if utils.IsDirectionalShooting(player) then
+                lastKnifeDirection = player:GetAimDirection()
+            end
+            local knifeDirection = utils.RotateVector(lastKnifeDirection, 180.0)
+
+            --if utils.IsDirectionalShooting(player) then
+            --    knifeDirection = utils.DirectionToVector[headDirection]
+            --end
+            pData.MomKnifeItem.Position = player.Position + knifeDirection:Resized(meleeOffset)
+            pData.MomKnifeItem.Rotation = knifeDirection:GetAngleDegrees()
+            --pData.KnifeLerpPosition = 0
+            --pData.InitKnifePosition = pData.MomKnifeItem.Position
+            --pData.TargetKnifePosition = pData.InitKnifePosition + utils.GetDirectionFromSource(player, pData.MomKnifeItem):Resized(utils.GetMeleeSize(player)+100)
+            --print("Vector: ", utils.GetMeleeSize(player)+10)
+            --if not utils.IsDirectionalShooting(player) or not pData.MomKnifeItem:IsFlying() then
+            local chargingKnife = pData.ChargingValue
+            if utils.IsDirectionalShooting(player) then
+                local markedTargetPos = utils.GetMarkedPos(player)
+                chargingKnife = math.max(0.0, math.min(1.0, player.Position:Distance(markedTargetPos) / 100.0))
+            end
+            pData.MomKnifeItem:Shoot(chargingKnife, utils.GetMeleeSize(player)+100)
+            --end
+        end
+        --[[if pData.IsScissorsEnabled then
+            pData.ScissorsCountAttacks = pData.ScissorsCountAttacks + 1
+            if utils.IsDirectionalShooting(player) then
+                if pData.ScissorsCountAttacks >= scissorsMaxAttacks * 10 then
+                    local tearParams = player:GetTearHitParams(WeaponType.WEAPON_TEARS)
+		            utils.AdjustProbabilities(player, tearParams)
+                    local tearPos = pData.ScissorsPosition + player.TearsOffset + Vector(0, player.TearHeight) 
+                    utils.FireTearFromPosition(player, tearPos, tearParams, tearParams.TearVariant)
+                end
+            else
+                if pData.ScissorsCountAttacks >= scissorsMaxAttacks then
+                    local tearParams = player:GetTearHitParams(WeaponType.WEAPON_TEARS)
+		            utils.AdjustProbabilities(player, tearParams)
+                    local tearPos = pData.ScissorsPosition + player.TearsOffset + Vector(0, player.TearHeight) 
+                    utils.FireTearFromPosition(player, tearPos, tearParams, tearParams.TearVariant)   
+                end
+            end
+        end]]--
         if player:HasCollectible(CollectibleType.COLLECTIBLE_EYE_OF_GREED) then
             if utils.IsDirectionalShooting(player) then
                 --local probTear = 0.02 
@@ -622,6 +850,10 @@ function Lust:PostUpdateMelee(player, lastFireDirection, effectPosAlt)
         end
         if player:HasCollectible(CollectibleType.COLLECTIBLE_EVIL_EYE) then
             if utils.IsDirectionalShooting(player) then
+                if pData.EvilEyeBall and pData.EvilEyeBall:IsDead() then
+                    pData.EvilEyeBall:Remove() 
+                    pData.EvilEyeBall = nil
+                end
                 if not pData.EvilEyeBall then
                     pData.EvilEyeBall = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.EVIL_EYE, 0, effectPosAlt, Vector.Zero, player):ToEffect()
                     pData.EvilEyeBall:AddEntityFlags(EntityFlag.FLAG_DONT_OVERWRITE | EntityFlag.FLAG_PERSISTENT)
@@ -667,10 +899,6 @@ function Lust:PostUpdateMelee(player, lastFireDirection, effectPosAlt)
                     local increment = math.max(0.25, math.min(pData.EvilEyeDirectionalDelay, 1.0 / fireDelay))
                     pData.EvilEyeDirectionalCount = pData.EvilEyeDirectionalCount + increment
                 end
-                if pData.EvilEyeBall and pData.EvilEyeBall:IsDead() then
-                    pData.EvilEyeBall:Remove() 
-                    pData.EvilEyeBall = nil
-                end
             else
                 local probLight = utils.RandomLuck(player.Luck, 0.0333, 0.10, 20.0)
                 local rand = utils.RandomRange(rng, 0.0, 1.0)
@@ -705,6 +933,10 @@ function Lust:PostUpdateMelee(player, lastFireDirection, effectPosAlt)
         end
         if player:HasCollectible(CollectibleType.COLLECTIBLE_TERRA) then
             if utils.IsDirectionalShooting(player) then
+                if pData.TerraRockBall and pData.TerraRockBall:IsDead() then
+                    pData.TerraRockBall:Remove() 
+                    pData.TerraRockBall = nil
+                end
                 if not pData.TerraRockBall then
                     pData.TerraRockBall = Isaac.Spawn(EntityType.ENTITY_TEAR, TearVariant.ROCK, 0, effectPosAlt, Vector.Zero, player):ToTear()
                     pData.TerraRockBall:AddEntityFlags(EntityFlag.FLAG_DONT_OVERWRITE | EntityFlag.FLAG_PERSISTENT)
@@ -716,10 +948,6 @@ function Lust:PostUpdateMelee(player, lastFireDirection, effectPosAlt)
                 pData.TerraRockBall.Position = effectPosAlt
                 --utils.SetAllTearFlag(player, pData.BrimstoneBall, tearParams)
                 pData.TerraRockBall.CollisionDamage = player.Damage / directionalDamageReduction
-                if pData.TerraRockBall and pData.TerraRockBall:IsDead() then
-                    pData.TerraRockBall:Remove() 
-                    pData.TerraRockBall = nil
-                end
             else
                 local tearVel = lastFireDirection:Resized(utils.GetShotSpeed(player))
                 local tearSpawned = Isaac.Spawn(EntityType.ENTITY_TEAR, TearVariant.ROCK, 0, effectPosTear, tearVel, player):ToTear()
@@ -798,11 +1026,12 @@ function Lust:PostUpdateMelee(player, lastFireDirection, effectPosAlt)
                     end
                 end
                 if pData.DrFetusBombDirectional then
-                    pData.DrFetusBombDirectional.Position = effectPosAlt
-                    pData.DrFetusBombDirectional.Velocity = Vector.Zero
                     if pData.DrFetusBombDirectional:IsDead() then
                         pData.DrFetusBombDirectional:Remove()
                         pData.DrFetusBombDirectional = nil
+                    else
+                        pData.DrFetusBombDirectional.Position = effectPosAlt
+                        pData.DrFetusBombDirectional.Velocity = Vector.Zero
                     end
                 end
             else
@@ -909,7 +1138,6 @@ function Lust:UpdateMelee(player)
 
                 -- Cargar la barra mientras el botón está pulsado
                 if isShooting then
-
                     if player:HasCollectible(CollectibleType.COLLECTIBLE_ANALOG_STICK) then
                         pData.MeleeLastFireDirection = player:GetLastDirection()
                     else
@@ -1314,6 +1542,8 @@ function Lust:UpdateMelee(player)
                             game:ShakeScreen(meleeTimeout)
                         end
     
+                        --print("Do sound")
+
                         -- Reproducir sonido y ejecutar callback
                         if pData.IsFullCharge then
                             SFXManager():Play(SoundEffect.SOUND_REDLIGHTNING_ZAP_WEAK)
@@ -1366,9 +1596,11 @@ function Lust:RenderPlayer(player)
         else
             if pData.IsRenderChanged then
                 --print("pData.IsRenderChanged = TRUE")
+                local weaponSprite = pData.MeleeWeapon:GetSprite()
                 if pData.IsCrownActive then
                     player:TryRemoveNullCostume(costumeFlyingAlt)
                     player:TryRemoveNullCostume(costumeAlt)
+                    weaponSprite:Play("Idle", true)
                     --print("Has Crown. Can Fly", player.CanFly)
                     if player.CanFly then
                         player:TryRemoveNullCostume(costume)
@@ -1383,6 +1615,7 @@ function Lust:RenderPlayer(player)
                 else
                     player:TryRemoveNullCostume(costumeFlying)
                     player:TryRemoveNullCostume(costume)
+                    weaponSprite:Play("IdleAlt", true)
                     --print("Does not have Crown. Can Fly", player.CanFly)
                     if player.CanFly then
                         player:TryRemoveNullCostume(costumeAlt)
@@ -1394,13 +1627,6 @@ function Lust:RenderPlayer(player)
                     --local playerSprite = player:GetSprite()
                     --playerSprite:ReplaceSpritesheet(0, skinAlt)
                     --playerSprite:LoadGraphics()
-                end
-
-                local weaponSprite = pData.MeleeWeapon:GetSprite()
-                if utils.CheckCrownOfLightStatus(player) then
-                    weaponSprite:Play("Idle", true)
-                else 
-                    weaponSprite:Play("IdleAlt", true)
                 end
 
                 pData.IsRenderChanged = false
@@ -1482,7 +1708,7 @@ function Lust:UpdatePlayer(player)
                     end
                 end
             end
-        end 
+        end
 
         if pData.IsNewRoom then
             --print("ENABLING CROWN AGAIN!")
@@ -1492,6 +1718,7 @@ function Lust:UpdatePlayer(player)
                 pData.DeadToothRing:Remove()
                 pData.DeadToothRing = nil
             end
+            Lust:RemoveCollectiblesRoom(player)
         end
         pData.IsNewRoom = false
     end
@@ -1555,6 +1782,25 @@ function Lust:OnPlayerPreColl(player, colEntity, low)
     end
 end
 
+function Lust:OnUseItem(player, collectibleType, activeSlot, useFlags, orng, customVarData)
+    local pData = utils.GetData(player)
+    --[[if collectibleType == CollectibleType.COLLECTIBLE_SCISSORS then
+        pData.IsScissorsEnabled = true
+        pData.ScissorsCountAttacks = 0
+        pData.ScissorsPosition = player.Position
+    end]]--
+end
+
+function Lust:OnPostUseItem(player, collectibleType, activeSlot, useFlags, orng, customVarData)
+    local pData = utils.GetData(player)
+    pData.IsRenderChanged = true
+    --[[if collectibleType == CollectibleType.COLLECTIBLE_SCISSORS then
+        pData.IsScissorsEnabled = true
+        pData.ScissorsCountAttacks = 0
+        pData.ScissorsPosition = player.Position
+    end]]--
+end
+
 mod:AddPriorityCallback(ModCallbacks.MC_EVALUATE_CACHE, CallbackPriority.DEFAULT, function(_, player, cacheFlag)
     Lust:OnCache(player, cacheFlag)
 end)
@@ -1572,6 +1818,12 @@ mod:AddPriorityCallback(ModCallbacks.MC_POST_PEFFECT_UPDATE, CallbackPriority.DE
 end)
 mod:AddPriorityCallback(ModCallbacks.MC_POST_NEW_ROOM, CallbackPriority.DEFAULT, function(_)
     Lust:OnNewRoom()
+end)
+mod:AddPriorityCallback(ModCallbacks.MC_USE_ITEM, CallbackPriority.DEFAULT, function(_, collectibleType, orng, player, useFlags, activeSlot, customVarData)
+    Lust:OnUseItem(player, collectibleType, activeSlot, useFlags, orng, customVarData)
+end)
+mod:AddPriorityCallback(ModCallbacks.MC_USE_ITEM, 300, function(_, collectibleType, orng, player, useFlags, activeSlot, customVarData) -- too late
+    Lust:OnPostUseItem(player, collectibleType, activeSlot, useFlags, orng, customVarData)
 end)
 mod:AddPriorityCallback(ModCallbacks.MC_POST_EFFECT_UPDATE, CallbackPriority.DEFAULT, function(_, effect)
     Lust:UpdateEffect(effect)
