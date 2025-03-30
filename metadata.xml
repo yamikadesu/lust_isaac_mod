@@ -13,6 +13,8 @@ v1.2 : From v1.2 there is now a small chance (initially 5% that increases to a m
 
 v1.4 : A new mechanic has been added for Birthright, now taking it will create an aura around Lust that will allow him to give kisses to enemies making them become his allies (in the case of bosses the kisses will hurt them) the aura disappears if Lust receives damage (Crown of Light), will you be able to do a pacifist run with Birthright spreading love and hugs?
 
+v1.9.4 : Now the crown of light is invisible as an item, so it is fully integrated inside the own player's logic.
+
 The sprites have been drawn by https://x.com/Freezepop88
 
 The cover art has been drawn by Yaku
@@ -20,7 +22,7 @@ The cover art has been drawn by Yaku
 And the trailer video and cover gif has been made by https://x.com/Moshi_Shian 
 
 If you find any bug or mod suggestion don't hesitate to comment it!</description>
-    <version>1.9.2</version>
+    <version>1.9.3</version>
     <visibility>Public</visibility>
     <tag id="Lua"/>
     <tag id="Player Characters"/>

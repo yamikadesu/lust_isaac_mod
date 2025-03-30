@@ -1,6 +1,6 @@
 local mod = RegisterMod("Lust (YamikaDesu)", 1) 
 
-local version = "1.9.3"
+local version = "1.9.4"
 local debugString = mod.Name .. " V" .. version .. " loaded successfully"
 print(debugString)
 
@@ -129,9 +129,9 @@ end
 function Lust:InitPlayer(player)
     if player:GetPlayerType() == playerType then
         --player:AddNullCostume(costume)
-        rng:SetSeed(Game():GetSeeds():GetStartSeed(), RECOMMENDED_SHIFT_IDX)
         local pData = utils.GetData(player)
-        --pData = {}
+        player:AddSoulHearts(4)
+        rng:SetSeed(Game():GetSeeds():GetStartSeed(), RECOMMENDED_SHIFT_IDX)
         pData.DefaultTearProbability = 0.05
         pData.MaxTearProbability = 0.5
         pData.MeleeAttackTriggered = false

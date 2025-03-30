@@ -49,6 +49,9 @@ end
 function utils.GetMeleeSize(player)
 	local pData = utils.GetData(player)
 	local tearRangeBonus = 0
+	if pData.IsCrownActive then
+		tearRangeBonus = tearRangeBonus + 5.25
+	end
 	if player:HasCollectible(CollectibleType.COLLECTIBLE_BLOOD_CLOT) and pData.CurrentEye == utils.Eyes.LEFT then
 		tearRangeBonus = tearRangeBonus + 2.75
 	end
@@ -387,7 +390,8 @@ function utils.CheckCrownOfLightStatus(player)
 	local pData = utils.GetData(player)
 
     -- Verificar si el jugador tiene el item Crown of Light
-    if player:HasCollectible(CollectibleType.COLLECTIBLE_CROWN_OF_LIGHT) then
+    --if player:HasCollectible(CollectibleType.COLLECTIBLE_CROWN_OF_LIGHT) then
+    if true then
         -- Verificar si el jugador tiene salud completa
         if player:GetHearts() == (player:GetMaxHearts() + 2*player:GetBoneHearts() )
 			and not pData.IsCrownDamaged then
@@ -404,7 +408,7 @@ function utils.CheckCrownOfLightStatus(player)
             pData.IsCrownActive = false
         end
     else
-		player:AddCollectible(CollectibleType.COLLECTIBLE_CROWN_OF_LIGHT)
+		--player:AddCollectible(CollectibleType.COLLECTIBLE_CROWN_OF_LIGHT)
 		if not pData.IsCrownActive then 
 			pData.IsRenderChanged = true
 		end
@@ -487,6 +491,9 @@ function utils.ApplyDamageBonus(player, meleeDamageMult, meleeChargeDamageMult, 
 		else 
 			damageMultiplier = 1.5
 		end
+	end
+	if pData.IsCrownActive then
+		damageMultiplier = damageMultiplier + 2.0
 	end
 	if player:HasCollectible(CollectibleType.COLLECTIBLE_CHOCOLATE_MILK) then
 		local percentCharged = pData.ChargeProgress / adjustedChargeTime
