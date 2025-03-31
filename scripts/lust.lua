@@ -28,6 +28,7 @@ local meleeDelayGrabbingFrames = 2 -- El delay del objeto llegando al jugador
 
 -- Los tiempos se calculan por frames approx, por lo que normalmente 30-15 serían 1 seg
 
+local initialSoulHearts = 2
 local meleeOffset = 12 
 local meleeSpriteOffset = -10
 local meleeSize = 16
@@ -130,7 +131,7 @@ function Lust:InitPlayer(player)
     if player:GetPlayerType() == playerType then
         --player:AddNullCostume(costume)
         local pData = utils.GetData(player)
-        player:AddSoulHearts(4)
+        player:AddSoulHearts(initialSoulHearts)
         rng:SetSeed(Game():GetSeeds():GetStartSeed(), RECOMMENDED_SHIFT_IDX)
         pData.DefaultTearProbability = 0.05
         pData.MaxTearProbability = 0.5
