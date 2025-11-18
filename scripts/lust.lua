@@ -172,6 +172,8 @@ function Lust:InitPlayer(player)
         pData.FriendlyDamageDelayTemp = 0
         pData.MeleeLastFireDirection = Vector(0,0)
         pData.PunchKnockback = 25
+        pData.KidneyStoneShot = 0
+        pData.CopyAttackFamiliars = {}
         --pData.IsKnifeMoving = false
         --pData.InitKnifePosition = Vector.Zero
         --pData.TargetKnifePosition = Vector.Zero
@@ -1095,10 +1097,6 @@ function Lust:UpdateMelee(player)
         --local isShooting = fireDirection:Length() > 0.2 or (fireInput:Length() > 0.2 and fireDirection:Length() > 0.2)
         local isShooting = fireDirection:Length() > 0.2 or fireInput:Length() > 0.2
 
-        if player:HasCollectible(CollectibleType.COLLECTIBLE_KIDNEY_STONE) then
-            --print("Is Shooting: ", fireDirection, fireInput)
-        end
-
         if utils.IsDirectionalShooting(player) then
             pData.MeleeHitbox = pData.MeleeWeapon
             pData.MeleeHitbox:SetDamageSource(EntityType.ENTITY_PLAYER)
@@ -1122,6 +1120,11 @@ function Lust:UpdateMelee(player)
             -- Detectamos si el jugador ha soltado el disparo
             local hasReleased = not isShooting and pData.WasShooting
     
+            if player:HasCollectible(CollectibleType.COLLECTIBLE_KIDNEY_STONE) and pData.KidneyStoneShot > 0 then
+                hasReleased = true
+                pData.MeleeAttackTriggered = false
+            end
+            
             local inverseCharge = player:HasCollectible(CollectibleType.COLLECTIBLE_NEPTUNUS)
 
             if pData.MeleeWeapon and pData.MeleeWeapon:Exists() then
@@ -1461,85 +1464,108 @@ function Lust:UpdateMelee(player)
                         --local mainFireDirection = lastFireDirection
                         --local doOnceSprite = true
 
+                        pData.CopyAttackFamiliars = {player.Position}
+
+                        --[[for _, roomEntity in pairs(Isaac.FindByType(EntityType.ENTITY_FAMILIAR, FamiliarVariant.TWISTED_BABY)) do
+                            if roomEntity.SpawnerEntity then
+                                local playerOwner = roomEntity.SpawnerEntity:ToPlayer()
+                                if playerOwner and GetPtrHash(playerOwner) == GetPtrHash(player) then
+                                    --utils.DestroyEntitiesFromEntity(roomEntity, EntityType.ENTITY_TEAR)
+                                    table.insert(pData.CopyAttackFamiliars, roomEntity.Position)
+                                end
+                            end
+                        end
+
+                        for _, roomEntity in pairs(Isaac.FindByType(EntityType.ENTITY_FAMILIAR, FamiliarVariant.INCUBUS)) do
+                            if roomEntity.SpawnerEntity then
+                                local playerOwner = roomEntity.SpawnerEntity:ToPlayer()
+                                if playerOwner and GetPtrHash(playerOwner) == GetPtrHash(player) then
+                                    --utils.DestroyEntitiesFromEntity(roomEntity, EntityType.ENTITY_TEAR)
+                                    table.insert(pData.CopyAttackFamiliars, roomEntity.Position)
+                                end
+                            end
+                        end]]--
+
                         for _, direction in ipairs(attacks) do
+                            for _, position in ipairs(pData.CopyAttackFamiliars) do
+                                pData.TotalAttacksNum = pData.TotalAttacksNum + 1
 
-                            pData.TotalAttacksNum = pData.TotalAttacksNum + 1
+                                --if numAttacks > 1 then
+                                lastFireDirection = direction
+                                --end
 
-                            --if numAttacks > 1 then
-                            lastFireDirection = direction
-                            --end
-
-                            -- Crear el hitbox del ataque
-                            pData.MeleeHitbox = Isaac.Spawn(EntityType.ENTITY_EFFECT, weaponAttack, 0, player.Position, Vector.Zero, player):ToEffect()
-                            local hitbox = pData.MeleeHitbox
-                            local hitboxSprite = hitbox:GetSprite()
-        
-                            -- Configurar el hitbox con la animación del arma
-                            hitboxSprite:Play(weaponSprite:GetAnimation(), true)
-                            hitboxSprite.Rotation = lastFireDirection:GetAngleDegrees() - 90
-                            hitboxSprite.Offset = lastFireDirection:Resized(-meleeDistance * 0.5) + Vector(0, meleeSpriteOffset)
-        
-                            local vecScale = Vector.One
-                            --if pData.IsFullCharge then 
-                            --    vecScale =  Vector(0.4, 2.0)
-                            --end
-                            
-                            --print("Animation long 2: ", vecScale);
-                            
-                            hitboxSprite.Scale = utils.GetMeleeSize(player) * vecScale
-                            hitboxSprite:ReplaceSpritesheet(0, emptyPng)
-                            hitboxSprite:ReplaceSpritesheet(3, emptyPng)
-                            hitboxSprite:LoadGraphics()
-                            --if doOnceSprite and (utils.VectorEquals(mainFireDirection, lastFireDirection) or not utils.ContainsDirection(attacks, mainFireDirection)) then
-                            --    print("Removed attack Mainvector: ", mainFireDirection)
-                            --    print("Removed attack Lastvector: ", lastFireDirection)
-                            --    wea:ReplaceSpritesheet(1, emptyPng)
-                            --    hitboxSprite:ReplaceSpritesheet(2, emptyPng)
-                            --    doOnceSprite = false
-                            --end
-        
-                            -- Ajustes del hitbox y colisiones
-                            hitbox.DepthOffset = -100
-        
-                            --[[
-                            vecScale = hitbox.SizeMulti
-                            if pData.IsFullCharge then 
-                                vecScale =  Vector(2.0, 0.4)
-                            end
-                            print("Animation long 3: ", vecScale);
-                            ]]--
-        
-                            hitbox:SetSize(utils.GetMeleeSize(player) * meleeRange, hitbox.SizeMulti, 12)
-                            hitbox:FollowParent(player)
-                            hitbox.ParentOffset = lastFireDirection * meleeDistance
-                            hitbox:SetDamageSource(EntityType.ENTITY_PLAYER)
-        
-                            -- Ajustar el daño del ataque
-                            --print("damageBonus: ", damageBonus)
-                            --print("damageMultiplier: ", damageMultiplier)
-                            --print("Delay: ", pData.ChargeProgress)
-                            hitbox.CollisionDamage = utils.ApplyDamageBonus(player, meleeDamageMult, meleeChargeDamageMult, adjustedChargeTime)
-                            hitbox:SetTimeout(meleeTimeout)
-                            --hitbox:Update()
-                            -- Actualización de tiempos y estados
-                            local fireDelayMultiplier = 1.0
-                            local fireDelayBonus = 0.0
-                            if player:HasCollectible(CollectibleType.COLLECTIBLE_EPIPHORA) and pData.TimeMarkSameDirection ~= 0 then
-                                local timeDiff = math.max(0.0, pData.TimeAttacking - pData.TimeMarkSameDirection)
-                                local maxTimeEpiphoraSpeed = 100
-                                --print("pData.TimeMarkSameDirection: ", pData.TimeMarkSameDirection)
-                                --print("timeDiff: ", timeDiff)
-                                fireDelayMultiplier = fireDelayMultiplier * (1.0 - (0.5 * math.min(1.0, timeDiff / maxTimeEpiphoraSpeed) ))
+                                -- Crear el hitbox del ataque
+                                pData.MeleeHitbox = Isaac.Spawn(EntityType.ENTITY_EFFECT, weaponAttack, 0, position, Vector.Zero, player):ToEffect()
+                                local hitbox = pData.MeleeHitbox
+                                local hitboxSprite = hitbox:GetSprite()
+            
+                                -- Configurar el hitbox con la animación del arma
+                                hitboxSprite:Play(weaponSprite:GetAnimation(), true)
+                                hitboxSprite.Rotation = lastFireDirection:GetAngleDegrees() - 90
+                                hitboxSprite.Offset = lastFireDirection:Resized(-meleeDistance * 0.5) + Vector(0, meleeSpriteOffset)
+            
+                                local vecScale = Vector.One
+                                --if pData.IsFullCharge then 
+                                --    vecScale =  Vector(0.4, 2.0)
+                                --end
+                                
+                                --print("Animation long 2: ", vecScale);
+                                
+                                hitboxSprite.Scale = utils.GetMeleeSize(player) * vecScale
+                                hitboxSprite:ReplaceSpritesheet(0, emptyPng)
+                                hitboxSprite:ReplaceSpritesheet(3, emptyPng)
+                                hitboxSprite:LoadGraphics()
+                                --if doOnceSprite and (utils.VectorEquals(mainFireDirection, lastFireDirection) or not utils.ContainsDirection(attacks, mainFireDirection)) then
+                                --    print("Removed attack Mainvector: ", mainFireDirection)
+                                --    print("Removed attack Lastvector: ", lastFireDirection)
+                                --    wea:ReplaceSpritesheet(1, emptyPng)
+                                --    hitboxSprite:ReplaceSpritesheet(2, emptyPng)
+                                --    doOnceSprite = false
+                                --end
+            
+                                -- Ajustes del hitbox y colisiones
+                                hitbox.DepthOffset = -100
+            
+                                --[[
+                                vecScale = hitbox.SizeMulti
+                                if pData.IsFullCharge then 
+                                    vecScale =  Vector(2.0, 0.4)
+                                end
+                                print("Animation long 3: ", vecScale);
+                                ]]--
+            
+                                hitbox:SetSize(utils.GetMeleeSize(player) * meleeRange, hitbox.SizeMulti, 12)
+                                hitbox:FollowParent(player)
+                                hitbox.ParentOffset = lastFireDirection * meleeDistance
+                                hitbox:SetDamageSource(EntityType.ENTITY_PLAYER)
+            
+                                -- Ajustar el daño del ataque
+                                --print("damageBonus: ", damageBonus)
+                                --print("damageMultiplier: ", damageMultiplier)
+                                --print("Delay: ", pData.ChargeProgress)
+                                hitbox.CollisionDamage = utils.ApplyDamageBonus(player, meleeDamageMult, meleeChargeDamageMult, adjustedChargeTime)
+                                hitbox:SetTimeout(meleeTimeout)
+                                --hitbox:Update()
+                                -- Actualización de tiempos y estados
+                                local fireDelayMultiplier = 1.0
+                                local fireDelayBonus = 0.0
+                                if player:HasCollectible(CollectibleType.COLLECTIBLE_EPIPHORA) and pData.TimeMarkSameDirection ~= 0 then
+                                    local timeDiff = math.max(0.0, pData.TimeAttacking - pData.TimeMarkSameDirection)
+                                    local maxTimeEpiphoraSpeed = 100
+                                    --print("pData.TimeMarkSameDirection: ", pData.TimeMarkSameDirection)
+                                    --print("timeDiff: ", timeDiff)
+                                    fireDelayMultiplier = fireDelayMultiplier * (1.0 - (0.5 * math.min(1.0, timeDiff / maxTimeEpiphoraSpeed) ))
+                                    --print("fireDelayMultiplier: ", fireDelayMultiplier)
+                                end
+                                if player:HasCollectible(CollectibleType.COLLECTIBLE_EYE_DROPS) and pData.CurrentEye == utils.Eyes.LEFT then
+                                    fireDelayMultiplier = fireDelayMultiplier * (1.0 - 0.4)
+                                end
                                 --print("fireDelayMultiplier: ", fireDelayMultiplier)
+                                player.FireDelay = (player.MaxFireDelay + fireDelayBonus) * fireDelayMultiplier
+                                player.HeadFrameDelay = utils.GetHeadFrameDelayCalc(player)
+            
+                                Lust:PostUpdateMelee(player, lastFireDirection, nil)
                             end
-                            if player:HasCollectible(CollectibleType.COLLECTIBLE_EYE_DROPS) and pData.CurrentEye == utils.Eyes.LEFT then
-                                fireDelayMultiplier = fireDelayMultiplier * (1.0 - 0.4)
-                            end
-                            --print("fireDelayMultiplier: ", fireDelayMultiplier)
-                            player.FireDelay = (player.MaxFireDelay + fireDelayBonus) * fireDelayMultiplier
-                            player.HeadFrameDelay = utils.GetHeadFrameDelayCalc(player)
-        
-                            Lust:PostUpdateMelee(player, lastFireDirection, nil)
                         end
                         
                         -- Efecto de pantalla si el tamaño supera el umbral
@@ -1715,6 +1741,27 @@ function Lust:UpdatePlayer(player)
             end
         end
 
+        if player:HasCollectible(CollectibleType.COLLECTIBLE_KIDNEY_STONE) then
+            for _, roomEntity in pairs(Isaac.FindByType(EntityType.ENTITY_TEAR, TearVariant.STONE)) do
+                if roomEntity.SpawnerEntity then
+                    local playerOwner = roomEntity.SpawnerEntity:ToPlayer()
+                    if playerOwner and GetPtrHash(playerOwner) == GetPtrHash(player) then
+                        pData.KidneyStoneShot = 140
+                    end
+                end
+            end
+        end
+
+        if pData.KidneyStoneShot > 0 then
+            pData.KidneyStoneShot = pData.KidneyStoneShot - 1
+            --Femtanyl:UpdateWeapon(player)
+            --Femtanyl:UpdateMelee(player)
+            --Femtanyl:UpdatePlayer(player)
+            --utils.OnUpdate(player)
+        else 
+            pData.KidneyStoneShot = 0
+        end
+
         if pData.IsNewRoom then
             --print("ENABLING CROWN AGAIN!")
             pData.IsCrownDamaged = false
@@ -1735,7 +1782,17 @@ function Lust:OnDamage(entity, amount, flag, source, countdown)
         --print("PLAYER IS DAMAGED!")
         local pData = utils.GetData(player)
         pData.IsCrownDamaged = true
-
+        if player:HasCollectible(CollectibleType.COLLECTIBLE_CURSED_EYE) then
+            if pData.ChargingValue > 0.0 and pData.ChargingValue < 1.0 then
+                --player:GetSprite():Stop()
+                player:AnimateTeleport(true)
+                local level = game:GetLevel()
+                local roomIndex = level:GetRandomRoomIndex(false, rng:GetSeed())
+                game:StartRoomTransition(roomIndex, Direction.NO_DIRECTION, RoomTransitionAnim.TELEPORT)
+                --SFXManager():Play(SoundEffect.SOUND_HELL_PORTAL2)
+                return true
+            end
+        end
     end
 end
 
@@ -1773,17 +1830,6 @@ end
 function Lust:OnPlayerPreColl(player, colEntity, low)
     if player:GetPlayerType() == playerType then
         local pData = utils.GetData(player)
-        if player:HasCollectible(CollectibleType.COLLECTIBLE_CURSED_EYE) then
-            if pData.ChargingValue > 0.0 and pData.ChargingValue < 1.0 and colEntity.CollisionDamage > 0.0 then
-                --player:GetSprite():Stop()
-                player:AnimateTeleport(true)
-                local level = game:GetLevel()
-                local roomIndex = level:GetRandomRoomIndex(false, rng:GetSeed())
-                game:StartRoomTransition(roomIndex, Direction.NO_DIRECTION, RoomTransitionAnim.TELEPORT)
-                --SFXManager():Play(SoundEffect.SOUND_HELL_PORTAL2)
-                return true
-            end
-        end
     end
 end
 
@@ -1806,6 +1852,19 @@ function Lust:OnPostUseItem(player, collectibleType, activeSlot, useFlags, orng,
     end]]--
 end
 
+function Lust:OnGetCollectible(collectibleType, itemPoolType, decrease, seed)
+    for _, entity in ipairs(Isaac.FindByType(EntityType.ENTITY_PLAYER)) do
+        local player = entity:ToPlayer() -- Convierte la entidad en un jugador
+
+        -- Verifica si el tipo de jugador coincide con el especificado
+        if player and player:GetPlayerType() == playerType then
+            local pData = utils.GetData(player) -- Obtiene los datos del jugador
+
+            --Other actions
+        end
+    end
+end
+
 mod:AddPriorityCallback(ModCallbacks.MC_EVALUATE_CACHE, CallbackPriority.DEFAULT, function(_, player, cacheFlag)
     Lust:OnCache(player, cacheFlag)
 end)
@@ -1823,6 +1882,9 @@ mod:AddPriorityCallback(ModCallbacks.MC_POST_PEFFECT_UPDATE, CallbackPriority.DE
 end)
 mod:AddPriorityCallback(ModCallbacks.MC_POST_NEW_ROOM, CallbackPriority.DEFAULT, function(_)
     Lust:OnNewRoom()
+end)
+mod:AddPriorityCallback(ModCallbacks.MC_POST_GET_COLLECTIBLE, CallbackPriority.DEFAULT, function(_, collectibleType, itemPoolType, decrease, seed)
+    Lust:OnGetCollectible(collectibleType, itemPoolType, decrease, seed)
 end)
 mod:AddPriorityCallback(ModCallbacks.MC_USE_ITEM, CallbackPriority.DEFAULT, function(_, collectibleType, orng, player, useFlags, activeSlot, customVarData)
     Lust:OnUseItem(player, collectibleType, activeSlot, useFlags, orng, customVarData)

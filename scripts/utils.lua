@@ -1302,6 +1302,17 @@ function utils.FindGridEntitiesByDistance(room, position, radius)
     return entitiesInRange
 end
 
+function utils.DestroyEntitiesFromEntity(entity, entityTypeToDestroy, entityVariantToDestroy)
+	entityVariantToDestroy = entityVariantToDestroy or -1
+	for _, roomEntity in pairs(Isaac.FindByType(entityTypeToDestroy, entityVariantToDestroy)) do
+		if roomEntity.SpawnerEntity then
+			if GetPtrHash(roomEntity.SpawnerEntity) == GetPtrHash(entity) then
+				roomEntity:Remove()
+			end
+		end
+	end
+end
+
 -- Destroys destructible grid entities in a radius (going by tears standarts)
 function utils.DestroyNearGrid(effect, position, radius)
 	local room = Game():GetRoom()
