@@ -374,6 +374,22 @@ function utils.GetPlayerFromTear(tear)
     return nil
 end
 
+utils.PlayerType = Isaac.GetPlayerTypeByName("Lust")
+utils.PlayerTypeTainted = Isaac.GetPlayerTypeByName("Lust", true)
+
+function utils.IsLust(player)
+	local playerType = player:GetPlayerType()
+	return playerType == utils.PlayerType or playerType == utils.PlayerTypeTainted
+end
+
+function utils.IsTaintedLust(player)
+	return player:GetPlayerType() == utils.PlayerTypeTainted
+end
+
+function utils.GetExtraCrowns(player)
+	return math.max(0, (utils.GetData(player).CrownCount or 0) - 1)
+end
+
 function utils.CheckFlyingStatus(player)
 	local pData = utils.GetData(player)
 	if player.CanFly and not pData.PrevFlyingValue then
@@ -391,7 +407,7 @@ function utils.CheckCrownOfLightStatus(player)
 
     -- Verificar si el jugador tiene el item Crown of Light
     --if player:HasCollectible(CollectibleType.COLLECTIBLE_CROWN_OF_LIGHT) then
-    if true then
+    if (pData.CrownCount or 0) > 0 then
         -- Verificar si el jugador tiene salud completa
         if player:GetHearts() == (player:GetMaxHearts() + 2*player:GetBoneHearts() )
 			and not pData.IsCrownDamaged then
@@ -408,11 +424,10 @@ function utils.CheckCrownOfLightStatus(player)
             pData.IsCrownActive = false
         end
     else
-		--player:AddCollectible(CollectibleType.COLLECTIBLE_CROWN_OF_LIGHT)
-		if not pData.IsCrownActive then 
+		if pData.IsCrownActive then
 			pData.IsRenderChanged = true
 		end
-        pData.IsCrownActive = true
+        pData.IsCrownActive = false
     end
 
 	return pData.IsCrownActive
@@ -453,6 +468,20 @@ function utils.GetShootingDirection(player, reversed)
 	end
 end
 
+
+function utils.GetAutoAttackDirection(player)
+	local lastFireDirection = utils.GetData(player).MeleeLastFireDirection
+	if lastFireDirection and lastFireDirection:Length() > 0 then
+		return lastFireDirection
+	end
+
+	local headDirection = utils.DirectionToVector[player:GetHeadDirection()] or Vector.Zero
+	if headDirection:Length() > 0 then
+		return headDirection
+	end
+
+	return utils.DirectionToVector[Direction.DOWN]
+end
 
 -- Returns true if a specific character is in the game
 function utils.IsCharacterInGame(character)
@@ -1255,13 +1284,13 @@ end
 -- Damages enemies in a certain radius
 function utils.DamageNearEnemies(source, position, radius, damage, flag, countdown)
 	local player = source.Parent:ToPlayer()
+	local enemiesHit = 0
 
-	if player then 
+	if player then
 		local pData = utils.GetData(player)
 		local tearParams = player:GetTearHitParams(WeaponType.WEAPON_TEARS)
 		utils.AdjustProbabilities(player, tearParams)
-		local enemiesHit = 0
-		
+
 		for _, enemy in pairs(Isaac.FindInRadius(position, radius, EntityPartition.ENEMY)) do
 			if enemy and utils.IsActiveVulnerableEnemy(enemy) and not enemy:HasEntityFlags(EntityFlag.FLAG_FRIENDLY) then
 
@@ -1286,6 +1315,8 @@ function utils.DamageNearEnemies(source, position, radius, damage, flag, countdo
 			end
 		end
 	end
+
+	return enemiesHit
 end
 
 function utils.FindGridEntitiesByDistance(room, position, radius)
@@ -1317,17 +1348,19 @@ end
 function utils.DestroyNearGrid(effect, position, radius)
 	local room = Game():GetRoom()
 	local player = effect.Parent:ToPlayer()
-	if player then 
+	local gridHit = 0
+	if player then
 		for _, gridEnemy in pairs(Isaac.FindInRadius(position, radius, EntityPartition.ENEMY)) do
 			if gridEnemy.Type == EntityType.ENTITY_FIREPLACE and gridEnemy.Variant == 10 then
 				gridEnemy:TakeDamage(999, 0, EntityRef(nil), 0) -- Only damage can trigger it's death effects for some reason
 			end
-			
+
 			if gridEnemy.Type == EntityType.ENTITY_FIREPLACE and gridEnemy.Variant <= 1
 			or gridEnemy.Type == EntityType.ENTITY_MOVABLE_TNT
 			or gridEnemy.Type == EntityType.ENTITY_POOP
 			then
 				gridEnemy:Kill()
+				gridHit = gridHit + 1
 			end
 		end
 
@@ -1346,18 +1379,24 @@ function utils.DestroyNearGrid(effect, position, radius)
 					or gridEntity:GetType() == GridEntityType.GRID_ROCK_SPIKED 
 					or gridEntity:GetType() == GridEntityType.GRID_ROCK_ALT2 
 					or gridEntity:GetType() == GridEntityType.GRID_ROCK_GOLD 
-					or gridEntity:GetType() == GridEntityType.GRID_WALL 
+					or gridEntity:GetType() == GridEntityType.GRID_WALL
 				then
-					gridEntity:Destroy()
+					if gridEntity:Destroy() then
+						gridHit = gridHit + 1
+					end
 				end
 			end
-			if gridEntity:GetType() == GridEntityType.GRID_POOP 
-				or gridEntity:GetType() == GridEntityType.GRID_TNT 
+			if gridEntity:GetType() == GridEntityType.GRID_POOP
+				or gridEntity:GetType() == GridEntityType.GRID_TNT
 			then
-				gridEntity:Destroy()  -- Destruir entidad si es de tipo GRID_POOP o GRID_TNT
+				if gridEntity:Destroy() then  -- Destruir entidad si es de tipo GRID_POOP o GRID_TNT
+					gridHit = gridHit + 1
+				end
 			end
 		end
 	end
+
+	return gridHit
 end
 
 -- << SLOT FUNCTIONS >> --

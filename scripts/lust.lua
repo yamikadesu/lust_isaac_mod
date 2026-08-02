@@ -12,12 +12,12 @@ local costume = Isaac.GetCostumeIdByPath("gfx/characters/character_Lust.anm2")
 local costumeAlt = Isaac.GetCostumeIdByPath("gfx/characters/character_Lust Alt.anm2")
 local costumeFlying = Isaac.GetCostumeIdByPath("gfx/characters/character_Lust Flying.anm2")
 local costumeFlyingAlt = Isaac.GetCostumeIdByPath("gfx/characters/character_Lust Flying Alt.anm2")
-local playerType = Isaac.GetPlayerTypeByName("Lust")
 local weapon = Isaac.GetEntityVariantByName("Energy Whip")
 local weaponAttack = Isaac.GetEntityVariantByName("Energy Whip Hitbox")
 local friendlyHalo = Isaac.GetEntityVariantByName("Friendly Halo")
 
 local utils = include("scripts/utils")
+local json = require("json")
 
 local game = Game()
 local rng = RNG()
@@ -59,7 +59,9 @@ local Lust = {
     TEARHEIGHT = 1,
     TEARFALLINGSPEED = 1,
     LUCK = 0,
-    FLYING = true,                                  
+    CROWNDAMAGE = 1,
+    CROWNSHOTSPEED = .3,
+    FLYING = true,
     TEARFLAG = 0, -- 0 is default
     TEARCOLOR = Color(0.1, 0.75, 1.0, 1.0, 0, 0, 0)  -- Color(1.0, 1.0, 1.0, 1.0, 0, 0, 0) is default
 }
@@ -67,12 +69,12 @@ local Lust = {
 -- Se ejecuta cuando el jugador está en caché
 function Lust:OnCache(player, cacheFlag)
     --if player:GetName() == "Lust" then -- Especially here!
-    if player:GetPlayerType() == playerType then -- Especially here!
+    if utils.IsLust(player) then -- Especially here!
         if cacheFlag == CacheFlag.CACHE_DAMAGE then
-            player.Damage = player.Damage + Lust.DAMAGE
+            player.Damage = player.Damage + Lust.DAMAGE + Lust.CROWNDAMAGE * utils.GetExtraCrowns(player)
         end
         if cacheFlag == CacheFlag.CACHE_SHOTSPEED then
-            player.ShotSpeed = player.ShotSpeed + Lust.SHOTSPEED
+            player.ShotSpeed = player.ShotSpeed + Lust.SHOTSPEED + Lust.CROWNSHOTSPEED * utils.GetExtraCrowns(player)
         end
         if cacheFlag == CacheFlag.CACHE_RANGE then
             player.TearRange = player.TearRange + Lust.TEARRANGE
@@ -98,14 +100,14 @@ function Lust:OnCache(player, cacheFlag)
 end
 
 function Lust:RemoveCollectiblesRoom(player) 
-    if player:GetPlayerType() == playerType then
+    if utils.IsLust(player) then
         local pData = utils.GetData(player)
         --pData.IsScissorsEnabled = false
     end
 end
 
 function Lust:RemoveDataEffects(player, except)
-    if player:GetPlayerType() == playerType then
+    if utils.IsLust(player) then
         local pData = utils.GetData(player)
         if pData.BrimstoneBall and pData.BrimstoneBall ~= except then 
             pData.BrimstoneBall:Remove() 
@@ -128,7 +130,7 @@ end
 
 -- Inicializa al jugador
 function Lust:InitPlayer(player)
-    if player:GetPlayerType() == playerType then
+    if utils.IsLust(player) then
         --player:AddNullCostume(costume)
         local pData = utils.GetData(player)
         player:AddSoulHearts(initialSoulHearts)
@@ -140,7 +142,8 @@ function Lust:InitPlayer(player)
         pData.ChargeProgress = 0
         pData.ChargingValue = 0
         pData.DoOnceChargingSound = true
-        pData.IsCrownActive = true
+        pData.CrownCount = utils.BoolToNum(utils.IsTaintedLust(player), 0, 1)
+        pData.IsCrownActive = pData.CrownCount > 0
         pData.IsRenderChanged = true
         pData.PrevFlyingValue = Lust.FLYING
         pData.HadDirectionalMovement = false
@@ -183,6 +186,26 @@ function Lust:InitPlayer(player)
     end
 end
 
+function Lust:SetCrownCount(player, count)
+    utils.GetData(player).CrownCount = count
+    player:AddCacheFlags(CacheFlag.CACHE_DAMAGE | CacheFlag.CACHE_SHOTSPEED)
+    player:EvaluateItems()
+end
+
+function Lust:AbsorbCrowns(player)
+    local crowns = player:GetCollectibleNum(CollectibleType.COLLECTIBLE_CROWN_OF_LIGHT, true)
+    if crowns <= 0 then return end
+
+    for _ = 1, crowns do
+        player:RemoveCollectible(CollectibleType.COLLECTIBLE_CROWN_OF_LIGHT)
+    end
+
+    local absorbed = crowns - player:GetCollectibleNum(CollectibleType.COLLECTIBLE_CROWN_OF_LIGHT, true)
+    if absorbed > 0 then
+        Lust:SetCrownCount(player, (utils.GetData(player).CrownCount or 0) + absorbed)
+    end
+end
+
 -- Inicializa el ataque cuerpo a cuerpo
 function Lust:InitMelee(effect)
     if effect.Variant == weapon then
@@ -198,7 +221,7 @@ end
 function Lust:UpdateWeapon(player)
     local pData = utils.GetData(player)
         
-    if player:GetPlayerType() ~= playerType then
+    if not utils.IsLust(player) then
         if pData.MeleeWeapon then
             pData.MeleeWeapon:Remove()
             pData.MeleeWeapon = nil
@@ -414,31 +437,46 @@ function Lust:UpdateWeapon(player)
 
 end
 
+function Lust:SpawnLiquidCreep(player, position, hits)
+    if hits <= 0 then return end
+    if not utils.HasTearFlag(player:GetTearHitParams(WeaponType.WEAPON_TEARS), TearFlags.TEAR_MYSTERIOUS_LIQUID_CREEP) then return end
+
+    if utils.IsDirectionalShooting(player) then
+        local probShot = 0.1
+        if utils.RandomRange(rng, 0.0, 1.0) > probShot then return end
+    end
+
+    Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.PLAYER_CREEP_GREEN, 0, position, Vector.Zero, player)
+end
+
 -- Gestiona el comportamiento de los efectos del ataque a melee
 function Lust:UpdateEffect(effect)
     if effect.Parent and effect.Parent:ToPlayer() then
         local player = effect.Parent:ToPlayer()
-        if player:GetPlayerType() == playerType then
+        if utils.IsLust(player) then
             local pData = utils.GetData(player)
             if effect.Variant == weaponAttack or effect.Variant == weapon then
                 if utils.IsDirectionalShooting(player) and effect.Variant == weapon then
                     utils.PushNearPickups(player, effect.Position, effect.Size, meleeKnockback)
                     utils.PushNearOthers(player, effect.Position, effect.Size, meleeKnockback)
-                    utils.DamageNearEnemies(effect, effect.Position, effect.Size, effect.CollisionDamage)
-                    utils.DestroyNearGrid(effect, effect.Position, effect.Size)
+                    local enemiesHit = utils.DamageNearEnemies(effect, effect.Position, effect.Size, effect.CollisionDamage)
+                    local gridHit = utils.DestroyNearGrid(effect, effect.Position, effect.Size)
+                    Lust:SpawnLiquidCreep(player, effect.Position, enemiesHit + gridHit)
                     effect.EntityCollisionClass = EntityCollisionClass.ENTCOLL_ALL
                 elseif not utils.IsDirectionalShooting(player) and effect.Variant == weaponAttack then
+                    effect.Position = player.Position + effect.ParentOffset
                     if effect.Timeout <= math.ceil(meleeTimeout * meleeWarmupMult) and effect.Timeout == 6 then --Small delay before actual  hittin'
                         if meleeCanCollect and not player:IsCoopGhost() then
                             utils.CollectNearPickups(player, effect.Position, effect.Size, meleeKnockback, meleeDelayGrabbingFrames)
                         else
                             utils.PushNearPickups(player, effect.Position, effect.Size, meleeKnockback)
                         end
-        
+
                         utils.PushNearOthers(player, effect.Position, effect.Size, meleeKnockback)
-                        utils.DamageNearEnemies(effect, effect.Position, effect.Size, effect.CollisionDamage)
-                        utils.DestroyNearGrid(effect, effect.Position, effect.Size)
-                        
+                        local enemiesHit = utils.DamageNearEnemies(effect, effect.Position, effect.Size, effect.CollisionDamage)
+                        local gridHit = utils.DestroyNearGrid(effect, effect.Position, effect.Size)
+                        Lust:SpawnLiquidCreep(player, effect.Position, enemiesHit + gridHit)
+
                         effect.EntityCollisionClass = EntityCollisionClass.ENTCOLL_ALL
                     end
                     if effect.Timeout <= 0 then effect:Remove() end
@@ -465,7 +503,7 @@ function Lust:OnHit(entity, amount, flag, source, countdown)
         if hitbox.Parent and hitbox.Parent:ToPlayer() then
             local player = hitbox.Parent:ToPlayer()
             
-            if player:GetPlayerType() == playerType then
+            if utils.IsLust(player) then
 
                 local pData = utils.GetData(player)
 
@@ -484,7 +522,7 @@ end
 
 -- Gestiona lo que ocurre después del melee (sinergias principalmente)
 function Lust:PostUpdateMelee(player, lastFireDirection, effectPosAlt)
-    if player:GetPlayerType() == playerType then
+    if utils.IsLust(player) then
         local pData = utils.GetData(player)
         local tearParams = player:GetTearHitParams(WeaponType.WEAPON_TEARS)
         
@@ -1057,7 +1095,7 @@ end
 
 -- Gestiona la lógica del ataque a melee
 function Lust:UpdateMelee(player)
-    if player:GetPlayerType() == playerType then
+    if utils.IsLust(player) then
         local pData = utils.GetData(player)
 
         --local headPosition = player.Position + player.TearsOffset + Vector(0, player.TearHeight) 
@@ -1124,7 +1162,12 @@ function Lust:UpdateMelee(player)
                 hasReleased = true
                 pData.MeleeAttackTriggered = false
             end
-            
+
+            if player:HasCollectible(CollectibleType.COLLECTIBLE_SOY_MILK) and not isShooting then
+                hasReleased = true
+                pData.MeleeAttackTriggered = false
+            end
+
             local inverseCharge = player:HasCollectible(CollectibleType.COLLECTIBLE_NEPTUNUS)
 
             if pData.MeleeWeapon and pData.MeleeWeapon:Exists() then
@@ -1228,8 +1271,8 @@ function Lust:UpdateMelee(player)
                         --weaponSprite:Update()
                         --print("Aim: ", player:GetLastDirection())
 
-                        lastFireDirection = pData.MeleeLastFireDirection
-                        
+                        lastFireDirection = utils.GetAutoAttackDirection(player)
+
                         if player:HasCollectible(CollectibleType.COLLECTIBLE_EPIPHORA) then
                             if pData.PrevAttackDirection and utils.VectorEquals(pData.PrevAttackDirection, lastFireDirection) then
                                 if pData.TimeMarkSameDirection == 0 then
@@ -1610,7 +1653,7 @@ end
 -- Gestiona la lógica de renderizado (especialmente de la barra de carga)
 function Lust:RenderPlayer(player)
     -- Renderizar la barra de carga si existe
-    if player:GetPlayerType() == playerType then
+    if utils.IsLust(player) then
         local pData = utils.GetData(player)
         utils.CheckFlyingStatus(player)
         utils.CheckCrownOfLightStatus(player)
@@ -1704,8 +1747,9 @@ function Lust:RenderPlayer(player)
 end
 
 function Lust:UpdatePlayer(player)
-    if player:GetPlayerType() == playerType then
+    if utils.IsLust(player) then
         local pData = utils.GetData(player)
+        Lust:AbsorbCrowns(player)
         if not pData.MeleeAttackTriggered and not utils.IsDirectionalShooting(player) then
             pData.TimeWithoutAttacking = pData.TimeWithoutAttacking + 1
             if pData.TimeWithoutAttacking >= 5 then
@@ -1778,7 +1822,7 @@ end
 
 function Lust:OnDamage(entity, amount, flag, source, countdown)
     local player = entity:ToPlayer()
-    if player and player:GetPlayerType() == playerType then
+    if player and utils.IsLust(player) then
         --print("PLAYER IS DAMAGED!")
         local pData = utils.GetData(player)
         pData.IsCrownDamaged = true
@@ -1801,7 +1845,7 @@ function Lust:OnNewRoom()
         local player = entity:ToPlayer() -- Convierte la entidad en un jugador
 
         -- Verifica si el tipo de jugador coincide con el especificado
-        if player and player:GetPlayerType() == playerType then
+        if player and utils.IsLust(player) then
             local pData = utils.GetData(player) -- Obtiene los datos del jugador
 
             -- Guarda una variable única en los datos del jugador
@@ -1828,7 +1872,7 @@ function Lust:OnTearPreColl(entity, colEntity, low)
 end
 
 function Lust:OnPlayerPreColl(player, colEntity, low)
-    if player:GetPlayerType() == playerType then
+    if utils.IsLust(player) then
         local pData = utils.GetData(player)
     end
 end
@@ -1857,10 +1901,33 @@ function Lust:OnGetCollectible(collectibleType, itemPoolType, decrease, seed)
         local player = entity:ToPlayer() -- Convierte la entidad en un jugador
 
         -- Verifica si el tipo de jugador coincide con el especificado
-        if player and player:GetPlayerType() == playerType then
+        if player and utils.IsLust(player) then
             local pData = utils.GetData(player) -- Obtiene los datos del jugador
 
             --Other actions
+        end
+    end
+end
+
+function Lust:SaveState()
+    local state = { Seed = game:GetSeeds():GetStartSeed(), Crowns = {} }
+    for i = 0, game:GetNumPlayers() - 1 do
+        state.Crowns[i + 1] = utils.GetData(Isaac.GetPlayer(i)).CrownCount or 0
+    end
+    mod:SaveData(json.encode(state))
+end
+
+function Lust:LoadState()
+    if not mod:HasData() then return end
+
+    local decoded, state = pcall(json.decode, mod:LoadData())
+    if not decoded or type(state) ~= "table" then return end
+    if state.Seed ~= game:GetSeeds():GetStartSeed() or type(state.Crowns) ~= "table" then return end
+
+    for i = 0, game:GetNumPlayers() - 1 do
+        local player = Isaac.GetPlayer(i)
+        if utils.IsLust(player) and state.Crowns[i + 1] then
+            Lust:SetCrownCount(player, state.Crowns[i + 1])
         end
     end
 end
@@ -1882,6 +1949,16 @@ mod:AddPriorityCallback(ModCallbacks.MC_POST_PEFFECT_UPDATE, CallbackPriority.DE
 end)
 mod:AddPriorityCallback(ModCallbacks.MC_POST_NEW_ROOM, CallbackPriority.DEFAULT, function(_)
     Lust:OnNewRoom()
+end)
+mod:AddPriorityCallback(ModCallbacks.MC_POST_GAME_STARTED, CallbackPriority.DEFAULT, function(_, isContinued)
+    if isContinued then
+        Lust:LoadState()
+    end
+end)
+mod:AddPriorityCallback(ModCallbacks.MC_PRE_GAME_EXIT, CallbackPriority.DEFAULT, function(_, shouldSave)
+    if shouldSave then
+        Lust:SaveState()
+    end
 end)
 mod:AddPriorityCallback(ModCallbacks.MC_POST_GET_COLLECTIBLE, CallbackPriority.DEFAULT, function(_, collectibleType, itemPoolType, decrease, seed)
     Lust:OnGetCollectible(collectibleType, itemPoolType, decrease, seed)
