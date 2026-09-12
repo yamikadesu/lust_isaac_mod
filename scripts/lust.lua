@@ -1,6 +1,6 @@
 local mod = RegisterMod("Lust (YamikaDesu)", 1) 
 
-local version = "1.9.6"
+local version = "1.9.7"
 local debugString = mod.Name .. " V" .. version .. " loaded successfully"
 print(debugString)
 
@@ -1709,7 +1709,12 @@ function Lust:RenderPlayer(player)
         end
 
         if player:HasCollectible(CollectibleType.COLLECTIBLE_BIRTHRIGHT) then
-            if not pData.FriendlyHalo and pData.IsCrownActive then
+            local isHaloActive = pData.IsCrownActive
+            if utils.IsTaintedLust(player) then
+                isHaloActive = not pData.IsCrownDamaged
+            end
+
+            if not pData.FriendlyHalo and isHaloActive then
                 local headPosition = player.Position + Vector(0, player.TearHeight)
                 pData.FriendlyHalo = Isaac.Spawn(EntityType.ENTITY_EFFECT, friendlyHalo, 1, headPosition, Vector.Zero, player):ToEffect()
                 pData.FriendlyHalo:AddEntityFlags(EntityFlag.FLAG_DONT_OVERWRITE | EntityFlag.FLAG_PERSISTENT)
@@ -1719,7 +1724,7 @@ function Lust:RenderPlayer(player)
             end
 
             if pData.FriendlyHalo then
-                if not pData.IsCrownActive then
+                if not isHaloActive then
                     pData.FriendlyHalo:Remove()
                     pData.FriendlyHalo = nil
                 else 
@@ -1909,6 +1914,16 @@ function Lust:OnGetCollectible(collectibleType, itemPoolType, decrease, seed)
     end
 end
 
+function Lust:GiveStartingItems()
+    for i = 0, game:GetNumPlayers() - 1 do
+        local player = Isaac.GetPlayer(i)
+        if utils.IsTaintedLust(player)
+            and not player:HasCollectible(CollectibleType.COLLECTIBLE_BIRTHRIGHT) then
+            player:AddCollectible(CollectibleType.COLLECTIBLE_BIRTHRIGHT)
+        end
+    end
+end
+
 function Lust:SaveState()
     local state = { Seed = game:GetSeeds():GetStartSeed(), Crowns = {} }
     for i = 0, game:GetNumPlayers() - 1 do
@@ -1953,6 +1968,8 @@ end)
 mod:AddPriorityCallback(ModCallbacks.MC_POST_GAME_STARTED, CallbackPriority.DEFAULT, function(_, isContinued)
     if isContinued then
         Lust:LoadState()
+    else
+        Lust:GiveStartingItems()
     end
 end)
 mod:AddPriorityCallback(ModCallbacks.MC_PRE_GAME_EXIT, CallbackPriority.DEFAULT, function(_, shouldSave)
